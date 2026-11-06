@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: '3,18,33,48 * * * *'
   workflow_dispatch:       # botão "Run workflow" na aba Actions
+    inputs:
+      enviar_resumo:
+        description: 'Mandar o resumo no WhatsApp agora (teste)'
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -50,6 +55,17 @@ jobs:
           mkdir -p _site
           cp -r index.html icons _site/
           node scripts/coletar.mjs _site/data.json
+
+      # Entre 0h e 2h59 (Brasília) gera o resumo do dia que acabou e manda no WhatsApp pelo CallMeBot.
+      # O número e a chave ficam nos segredos do repositório, nunca no código.
+      - name: Resumo do dia
+        if: steps.idade.outputs.publicar == 'true'
+        continue-on-error: true
+        env:
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+          FORCAR_RESUMO: ${{ github.event.inputs.enviar_resumo }}
+        run: node scripts/resumo.mjs _site/data.json
 
       - uses: actions/upload-pages-artifact@v4
         if: steps.idade.outputs.publicar == 'true'

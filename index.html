@@ -125,6 +125,14 @@ li.cur .aw-per { color: var(--gold); }
 .aw-name { white-space: nowrap; }
 .aw-none { font-size: 13px; color: var(--muted); grid-column: 2 / -1; }
 
+/* Resumo do dia (o mesmo texto que vai para o WhatsApp) */
+.rs-bubble {
+  white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.55 var(--f-body); color: var(--fg);
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px 12px 12px 3px;
+  padding: 12px 14px; max-width: 560px;
+}
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+
 /* Resumo do grupo */
 .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 28px; padding-block: 18px; border-block: 1px solid var(--line); }
 .summary div { display: grid; gap: 2px; min-width: 0; }
@@ -469,6 +477,20 @@ footer p { margin: 0; max-width: 72ch; }
     </div>
     <div class="awards" id="awards"></div>
     <p class="table-note">EHB e EHP são as horas eficientes do Wise Old Man: quanto tempo um jogador eficiente levaria para conseguir os mesmos abates (EHB) ou o mesmo XP (EHP). Wintertodt, Tempoross e Zalcano contam como skill, não como PvM.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="rs-title" id="resumo" hidden>
+    <div class="panel-head">
+      <div>
+        <h2 id="rs-title">Resumo do dia</h2>
+        <p class="sub" id="rs-sub"></p>
+      </div>
+      <div class="g-actions">
+        <a class="btn btn-main lg" id="rs-wa" href="#" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+        <button type="button" class="btn lg" id="rs-copy">Copiar texto</button>
+      </div>
+    </div>
+    <div class="rs-bubble" id="rs-text"></div>
   </section>
 
   <section class="summary" id="summary" aria-label="Resumo do grupo"></section>
@@ -913,7 +935,7 @@ footer p { margin: 0; max-width: 72ch; }
   // ---------- Renderização ----------
   function render() {
     bucketMemo = new Map();
-    renderStatus(); renderAwards(); renderSummary(); renderCards(); renderGoals(); renderChart(); renderSkills(); renderBosses(); renderAch(); renderSheet();
+    renderStatus(); renderAwards(); renderResumo(); renderSummary(); renderCards(); renderGoals(); renderChart(); renderSkills(); renderBosses(); renderAch(); renderSheet();
     syncButtons();
   }
   function syncButtons() {
@@ -994,6 +1016,29 @@ footer p { margin: 0; max-width: 72ch; }
         }).join('')}</ol>
       </article>`).join(''));
   }
+
+  // ---------- Resumo do dia ----------
+  // Gerado à meia-noite pelo GitHub (scripts/resumo.mjs) e guardado no data.json; aqui só mostra e compartilha.
+  function renderResumo() {
+    const r = state.data && state.data.resumo;
+    const box = $('resumo');
+    box.hidden = !(r && r.texto);
+    if (box.hidden) return;
+    // Mesmo visual do WhatsApp: *negrito* e _itálico_.
+    $('rs-text').innerHTML = esc(r.texto).replace(/\*([^*\n]+)\*/g, '<b>$1</b>').replace(/(^|\s)_([^_\n]+)_/g, '$1<i>$2</i>');
+    $('rs-sub').textContent = r.de
+      ? `Do dia ${r.rotulo}, gerado à meia-noite${r.enviado ? ' e já enviado no seu WhatsApp' : ''}. Toque em “Enviar no WhatsApp” e escolha o grupo.`
+      : 'Prévia das últimas 24 horas. O primeiro resumo de verdade sai à meia-noite.';
+    $('rs-wa').href = `https://wa.me/?text=${encodeURIComponent(r.texto)}`;
+  }
+  $('rs-copy').addEventListener('click', async () => {
+    const r = state.data && state.data.resumo;
+    if (!r) return;
+    const b = $('rs-copy');
+    try { await navigator.clipboard.writeText(r.texto); b.textContent = 'Copiado!'; }
+    catch (_) { b.textContent = 'Não deu para copiar'; }
+    setTimeout(() => { b.textContent = 'Copiar texto'; }, 2000);
+  });
 
   function renderSummary() {
     const vs = PLAYERS.map(p => view(p));
