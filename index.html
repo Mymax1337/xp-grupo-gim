@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>XP do Grupo GIM</title>
 <meta name="description" content="Acompanha o XP dos membros do grupo GIM de Old School RuneScape, atualizado a cada hora pelo Wise Old Man.">
+<script>
+  // Começa a baixar os dados antes do resto da página; o parâmetro evita cópias antigas em cache.
+  window.__gimData = fetch('data.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
@@ -78,19 +82,10 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px s
 .eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 h1 { margin: 0; font: 700 clamp(34px, 6vw, 52px)/1 var(--f-display); letter-spacing: .01em; text-wrap: balance; }
 h1 em { font-style: normal; color: var(--gold); }
-.status { display: grid; gap: 8px; justify-items: end; }
-.status-line { font-size: 13px; color: var(--fg-2); text-align: right; }
-.status-line b { color: var(--fg); font-weight: 700; }
-.btn {
-  font: 700 13px/1 var(--f-body); color: var(--fg); background: var(--surface-2);
-  border: 1px solid var(--line); border-radius: var(--r); padding: 9px 14px; cursor: pointer;
-  display: inline-flex; gap: 8px; align-items: center;
-}
-.btn:hover { border-color: var(--muted); }
-.btn[disabled] { opacity: .55; cursor: progress; }
-.spin { width: 10px; height: 10px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; display: none; }
-.btn[disabled] .spin { display: inline-block; animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.status { display: grid; gap: 4px; justify-items: end; text-align: right; font-size: 13px; color: var(--fg-2); }
+.status b { color: var(--fg); font-weight: 700; }
+.status .next { color: var(--muted); }
+.status.late b { color: var(--warn); }
 
 /* Resumo do grupo */
 .summary { display: flex; flex-wrap: wrap; gap: 12px 40px; padding-block: 18px; border-block: 1px solid var(--line); }
@@ -119,9 +114,7 @@ h1 em { font-style: normal; color: var(--gold); }
 .card {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
   padding: 16px; display: grid; gap: 14px; align-content: start; min-width: 0;
-  transition: opacity .2s;
 }
-.loading .card, .loading .panel { opacity: .6; }
 .card-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
 .rank { font: 700 26px/1 var(--f-display); color: var(--muted); min-width: 1.6em; }
 .card.first .rank { color: var(--gold); }
@@ -146,7 +139,7 @@ h1 em { font-style: normal; color: var(--gold); }
 .tops ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
 .tops li { display: flex; justify-content: space-between; gap: 8px; }
 .tops li span:last-child { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--fg-2); }
-.tops .empty { color: var(--muted); font-size: 13px; }
+.tops .empty { color: var(--muted); font-size: 13px; margin: 0; }
 .fresh { margin: 0; font-size: 12px; color: var(--fg-2); display: flex; gap: 6px; align-items: baseline; }
 .fresh i { font-style: normal; }
 .fresh.ok i { color: var(--good); }
@@ -155,7 +148,7 @@ h1 em { font-style: normal; color: var(--gold); }
 .card .err-msg { margin: 0; font-size: 12px; color: var(--muted); }
 
 /* Painéis */
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; transition: opacity .2s; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; }
 .panel-head { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; align-items: baseline; }
 .panel h2 { margin: 0; font: 700 20px/1.2 var(--f-display); text-wrap: balance; }
 .panel .sub { margin: 0; font-size: 13px; color: var(--muted); }
@@ -205,8 +198,7 @@ footer p { margin: 0; max-width: 70ch; }
 
 @media (max-width: 560px) {
   body { padding-block: 20px 40px; }
-  .status { justify-items: start; }
-  .status-line { text-align: left; }
+  .status { justify-items: start; text-align: left; }
   .summary strong { font-size: 19px; }
   .panel { padding: 14px; }
   .table-scroll { margin-inline: -14px; padding-inline: 14px; }
@@ -223,10 +215,7 @@ footer p { margin: 0; max-width: 70ch; }
       <span class="eyebrow">Old School RuneScape · Group Ironman</span>
       <h1>XP do Grupo <em>GIM</em></h1>
     </div>
-    <div class="status">
-      <div class="status-line" id="status-line" aria-live="polite">Carregando dados do Wise Old Man…</div>
-      <button class="btn" id="refresh-btn" type="button"><span class="spin" aria-hidden="true"></span><span id="refresh-label">Atualizar agora</span></button>
-    </div>
+    <div class="status" id="status" aria-live="polite">Carregando…</div>
   </header>
 
   <section class="summary" id="summary" aria-label="Resumo do grupo"></section>
@@ -237,7 +226,7 @@ footer p { margin: 0; max-width: 70ch; }
       <button type="button" id="p-week" data-period="week" aria-pressed="true">7 dias</button>
       <button type="button" id="p-month" data-period="month" aria-pressed="false">30 dias</button>
     </div>
-    <span class="hint" id="period-hint">Ranking pelo XP ganho no período</span>
+    <span class="hint">Ranking pelo XP ganho no período</span>
   </div>
 
   <div id="banner"></div>
@@ -270,8 +259,7 @@ footer p { margin: 0; max-width: 70ch; }
   </section>
 
   <footer>
-    <p>Dados do <a href="https://wiseoldman.net" target="_blank" rel="noopener">Wise Old Man</a>, que lê os hiscores oficiais do OSRS. Com esta página aberta, ela pede uma atualização de cada jogador a cada hora e recarrega os números sozinha.</p>
-    <p>O histórico fica guardado no Wise Old Man, então os ganhos de 24 horas, 7 dias e 30 dias continuam valendo mesmo se você fechar a página.</p>
+    <p>Os números são atualizados automaticamente a cada hora com os dados do <a href="https://wiseoldman.net" target="_blank" rel="noopener">Wise Old Man</a>, que lê os hiscores oficiais do OSRS. A página só mostra o resultado já pronto, por isso abre na hora.</p>
   </footer>
 </div>
 
@@ -286,10 +274,8 @@ footer p { margin: 0; max-width: 70ch; }
     { name: 'GIM Zezinho',  short: 'Zezinho',  slot: 3 },
     { name: 'GIM Elite Br', short: 'Elite Br', slot: 4 },
   ];
-  const API = 'https://api.wiseoldman.net/v2';
-  const REFRESH_MS = 60 * 60 * 1000;     // atualiza a cada 1 hora
-  const STALE_MS = 50 * 60 * 1000;       // pede update ao WOM se o dado tiver mais de 50 min
-  const RETRY_MS = 5 * 60 * 1000;        // em caso de falha geral, tenta de novo em 5 min
+  const UPDATE_EVERY_MS = 60 * 60 * 1000;  // o GitHub gera um data.json novo a cada hora
+  const CHECK_EVERY_MS = 5 * 60 * 1000;    // com a página aberta, confere a cada 5 min se já saiu
   const PERIODS = {
     day:   { label: '24 horas', ms: 864e5 },
     week:  { label: '7 dias',   ms: 7 * 864e5 },
@@ -300,37 +286,11 @@ footer p { margin: 0; max-width: 70ch; }
   // ---------- Estado ----------
   const state = {
     period: 'week',
-    busy: false,
-    progress: '',
-    lastRefresh: 0,
-    nextRefresh: 0,
-    fatal: null,
+    data: null,
+    loadError: null,
     p: Object.fromEntries(PLAYERS.map(p => [p.name, { details: null, periods: {}, error: null, updateError: null }])),
   };
   try { const saved = localStorage.getItem('gim-period'); if (PERIODS[saved]) state.period = saved; } catch (_) {}
-
-  // Cache local: recarregar a página dentro da mesma hora não refaz todos os pedidos ao Wise Old Man.
-  const CACHE_KEY = 'gim-cache-v1';
-  function saveCache() {
-    try {
-      const p = {};
-      for (const [name, s] of Object.entries(state.p)) p[name] = { details: s.details, periods: s.periods, updateError: s.updateError };
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ lastRefresh: state.lastRefresh, nextRefresh: state.nextRefresh, p }));
-    } catch (_) {}
-  }
-  function loadCache() {
-    try {
-      const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-      if (!c || !c.p) return false;
-      for (const p of PLAYERS) {
-        const cs = c.p[p.name]; if (!cs || !cs.details) continue;
-        Object.assign(state.p[p.name], { details: cs.details, periods: cs.periods || {}, updateError: cs.updateError || null });
-      }
-      state.lastRefresh = c.lastRefresh || 0;
-      state.nextRefresh = c.nextRefresh || 0;
-      return true;
-    } catch (_) { return false; }
-  }
 
   // ---------- Formatação ----------
   const nf = new Intl.NumberFormat('pt-BR');
@@ -343,6 +303,7 @@ footer p { margin: 0; max-width: 70ch; }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const plus = n => (n > 0 ? '+' : '') + nf.format(n);
   const color = slot => `var(--s${slot})`;
+  const enc = n => encodeURIComponent(n);
   function ago(ts) {
     const s = Math.max(0, (Date.now() - ts) / 1000);
     if (s < 90) return 'agora há pouco';
@@ -354,101 +315,37 @@ footer p { margin: 0; max-width: 70ch; }
   }
   const skillName = k => SKILL_NAMES[k] || k[0].toUpperCase() + k.slice(1);
 
-  // ---------- API do Wise Old Man (limite: 20 req/min sem chave) ----------
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const sent = [];
-  async function throttle() {
-    for (;;) {
-      const now = Date.now();
-      while (sent.length && now - sent[0] > 61000) sent.shift();
-      if (sent.length < 17) { sent.push(now); return; }
-      await sleep(61000 - (now - sent[0]) + 100);
-    }
+  // ---------- Dados prontos (data.json, gerado de hora em hora) ----------
+  let loading = null;
+  function loadData() {
+    if (!loading) loading = fetchData().finally(() => { loading = null; });
+    return loading;
   }
-  async function api(path, method = 'GET', tries = 0) {
-    await throttle();
-    let res;
+  async function fetchData() {
     try {
-      res = await fetch(API + path, { method, headers: { Accept: 'application/json' } });
-    } catch (e) {
-      const err = new Error('Sem conexão com o Wise Old Man'); err.network = true; throw err;
-    }
-    if (res.status === 429 && tries < 4) {
-      const wait = 30 * (tries + 1);
-      const before = state.progress;
-      state.progress = `O Wise Old Man pediu uma pausa. Tentando de novo em ${wait} s…`;
-      renderStatus();
-      await sleep(wait * 1000);
-      state.progress = before; renderStatus();
-      return api(path, method, tries + 1);
-    }
-    const body = await res.json().catch(() => null);
-    if (!res.ok) {
-      const err = new Error((body && body.message) || `Erro ${res.status}`);
-      err.status = res.status; throw err;
-    }
-    return body;
-  }
-  const enc = n => encodeURIComponent(n);
-
-  async function refreshAll({ manual = false } = {}) {
-    if (state.busy) return;
-    state.busy = true; state.fatal = null;
-    let ok = 0;
-    for (const [i, p] of PLAYERS.entries()) {
-      const s = state.p[p.name];
-      state.progress = `Atualizando ${p.name} (${i + 1}/${PLAYERS.length})…`;
-      renderStatus();
-      try {
-        const path = `/players/${enc(p.name)}`;
-        let d = null;
-        // Consulta primeiro: se o PC do grupo ou outro visitante já atualizou na última hora,
-        // não pede uma nova leitura dos hiscores.
-        let age = Infinity;
-        try { d = await api(path); age = Date.now() - new Date(d.updatedAt).getTime(); }
-        catch (e) { if (e.status !== 404) throw e; }
-        if (age > STALE_MS || (manual && age > 65000)) {
-          try { d = await api(path, 'POST'); s.updateError = null; }
-          catch (e) { s.updateError = e.message; d = null; }
+      let res;
+      if (window.__gimData) { res = await window.__gimData; window.__gimData = null; }
+      else res = await fetch(`data.json?t=${Math.floor(Date.now() / 60000)}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      state.loadError = null;
+      if (!state.data || data.generatedAt !== state.data.generatedAt) {
+        state.data = data;
+        for (const p of PLAYERS) {
+          const src = (data.players || []).find(x => x.name === p.name) || {};
+          const periods = {};
+          for (const k of Object.keys(PERIODS)) {
+            if (src.periods && src.periods[k]) periods[k] = { gained: src.periods[k].gained, timeline: src.timeline || [] };
+          }
+          state.p[p.name] = { details: src.details || null, periods, error: src.error || null, updateError: src.updateError || null };
         }
-        if (!d) d = await api(path);
-        s.details = d; s.error = null; s.periods = {};
-        ok++;
-      } catch (e) {
-        s.error = e.message;
-        if (s.details) ok++;
       }
-      renderCards();
+    } catch (e) {
+      state.loadError = state.data
+        ? 'Não consegui buscar dados mais novos. Mostrando os últimos que carreguei.'
+        : 'Não consegui carregar os dados. Recarregue a página em alguns minutos.';
     }
-    state.progress = 'Carregando ganhos do período…';
-    renderStatus();
-    await loadPeriod(state.period);
-    state.busy = false; state.progress = '';
-    state.lastRefresh = Date.now();
-    if (!ok) {
-      state.fatal = 'Não consegui falar com o Wise Old Man. Vou tentar de novo em 5 minutos.';
-      state.nextRefresh = Date.now() + RETRY_MS;
-    } else {
-      state.nextRefresh = state.lastRefresh + REFRESH_MS;
-    }
-    saveCache();
     render();
-  }
-
-  // ganhos por skill + linha do tempo do XP total, um jogador por vez
-  async function loadPeriod(period) {
-    for (const p of PLAYERS) {
-      const s = state.p[p.name];
-      if (!s.details || (s.periods[period] && !s.periods[period].error)) continue;
-      try {
-        const gained = await api(`/players/${enc(p.name)}/gained?period=${period}`);
-        const timeline = await api(`/players/${enc(p.name)}/snapshots/timeline?metric=overall&period=${period}`);
-        s.periods[period] = { gained, timeline: (timeline || []).slice().sort((a, b) => new Date(a.date) - new Date(b.date)) };
-      } catch (e) {
-        s.periods[period] = { error: e.message };
-      }
-    }
-    saveCache();
   }
 
   // ---------- Leitura dos dados ----------
@@ -469,16 +366,15 @@ footer p { margin: 0; max-width: 70ch; }
   function render() { renderStatus(); renderSummary(); renderCards(); renderChart(); renderSkills(); }
 
   function renderStatus() {
-    const line = document.getElementById('status-line');
-    const btn = document.getElementById('refresh-btn');
-    btn.disabled = state.busy;
-    document.getElementById('refresh-label').textContent = state.busy ? 'Atualizando…' : 'Atualizar agora';
-    document.getElementById('app').classList.toggle('loading', state.busy);
-    if (state.busy) { line.textContent = state.progress; return; }
-    if (!state.lastRefresh) { line.textContent = 'Carregando dados do Wise Old Man…'; return; }
-    const left = Math.max(0, state.nextRefresh - Date.now());
-    const mm = Math.floor(left / 60000), ss = Math.floor((left % 60000) / 1000);
-    line.innerHTML = `Atualizado às <b>${hm(new Date(state.lastRefresh))}</b> · próxima atualização em <b class="num">${pad(mm)}:${pad(ss)}</b>`;
+    const el = document.getElementById('status');
+    if (!state.data) { el.textContent = state.loadError ? '' : 'Carregando…'; return; }
+    const gen = new Date(state.data.generatedAt);
+    const late = Date.now() - gen.getTime() > 2 * UPDATE_EVERY_MS;
+    el.classList.toggle('late', late);
+    const next = new Date(gen.getTime() + UPDATE_EVERY_MS);
+    el.innerHTML = `<span>Dados de <b>${hm(gen)}</b> (${ago(gen.getTime())})</span>` +
+      (late ? '<span class="next">A atualização automática está atrasada.</span>'
+            : `<span class="next">Próxima atualização por volta das ${hm(next)}</span>`);
   }
 
   function renderSummary() {
@@ -495,8 +391,7 @@ footer p { margin: 0; max-width: 70ch; }
       <div><span>XP ganho em ${label}</span><strong class="${groupGain > 0 ? 'up' : ''}">${gains.length ? plus(groupGain) : '—'}</strong></div>
       <div><span>Nível total somado</span><strong>${withData.length ? nf.format(totalLvl) : '—'}</strong></div>
       <div><span>Destaque do período</span><strong>${best && best.gained > 0 ? esc(best.p.short) : '—'}</strong></div>`;
-    const b = document.getElementById('banner');
-    b.innerHTML = state.fatal ? `<div class="banner" role="alert">${esc(state.fatal)}</div>` : '';
+    document.getElementById('banner').innerHTML = state.loadError ? `<div class="banner" role="alert">${esc(state.loadError)}</div>` : '';
   }
 
   function ranked() {
@@ -520,12 +415,12 @@ footer p { margin: 0; max-width: 70ch; }
           <div class="who"><small>GIM</small><h2><span class="key" style="background:${color(p.slot)}"></span>${esc(p.short)}</h2></div>
           <a class="wom" href="${profile}" target="_blank" rel="noopener">Perfil ↗</a>
         </div>`;
-      if (!d) {
-        const msg = s.error ? `<p class="fresh err"><i>●</i>Erro: ${esc(s.error)}</p>` : `<p class="fresh"><i>●</i>Carregando…</p>`;
+      if (!d || !skills) {
+        const msg = s.error ? `<p class="fresh err"><i>●</i>Sem dados: ${esc(s.error)}</p>` : `<p class="fresh"><i>●</i>${state.data ? 'Sem dados' : 'Carregando…'}</p>`;
         return `<article class="card">${head}${msg}</article>`;
       }
       const updated = new Date(d.updatedAt).getTime();
-      const fresh = Date.now() - updated < 70 * 60000;
+      const fresh = Date.now() - updated < 2 * UPDATE_EVERY_MS;
       const tops = g ? Object.values(g).filter(x => x.metric !== 'overall' && x.experience.gained > 0)
         .sort((a, b) => b.experience.gained - a.experience.gained).slice(0, 3) : [];
       const gained = v.gained;
@@ -534,7 +429,7 @@ footer p { margin: 0; max-width: 70ch; }
           ${head}
           <div class="gain">
             <span>XP ganho · ${label}</span>
-            <strong class="${gained > 0 ? '' : 'zero'}">${gained == null ? '…' : plus(gained)}</strong>
+            <strong class="${gained > 0 ? '' : 'zero'}">${gained == null ? '—' : plus(gained)}</strong>
           </div>
           <div class="bar" role="img" aria-label="${gained ? Math.round(gained / max * 100) : 0}% do maior ganho do grupo"><i style="width:${gained ? (gained / max * 100).toFixed(1) : 0}%;background:${color(p.slot)}"></i></div>
           <dl class="stats">
@@ -547,10 +442,10 @@ footer p { margin: 0; max-width: 70ch; }
           <div class="tops">
             <h3>Mais treinadas · ${label}</h3>
             ${tops.length ? `<ol>${tops.map(t => `<li><span>${esc(skillName(t.metric))}${t.level.gained > 0 ? ` <small style="color:var(--good)">→ ${t.level.end}</small>` : ''}</span><span>${plus(t.experience.gained)}</span></li>`).join('')}</ol>`
-              : `<p class="empty">${g ? 'Nenhum XP registrado no período.' : 'Carregando…'}</p>`}
+              : `<p class="empty">Nenhum XP registrado no período.</p>`}
           </div>
-          <p class="fresh ${fresh ? 'ok' : 'old'}" title="${esc(new Date(updated).toLocaleString('pt-BR'))}"><i>●</i>${fresh ? 'Atualizado' : 'Última atualização'} ${ago(updated)}</p>
-          ${s.updateError && !fresh ? `<p class="err-msg">O Wise Old Man não conseguiu atualizar: ${esc(s.updateError)}</p>` : ''}
+          <p class="fresh ${fresh ? 'ok' : 'old'}" title="${esc(new Date(updated).toLocaleString('pt-BR'))}"><i>●</i>Hiscores lidos ${ago(updated)}</p>
+          ${s.error ? `<p class="err-msg">Mostrando dados anteriores: ${esc(s.error)}</p>` : ''}
         </article>`;
     }).join('');
   }
@@ -588,7 +483,7 @@ footer p { margin: 0; max-width: 70ch; }
       svg.innerHTML = '';
       svg.setAttribute('height', 0);
       if (!box.querySelector('.chart-empty')) box.insertAdjacentHTML('beforeend', '<div class="chart-empty"></div>');
-      box.querySelector('.chart-empty').textContent = state.busy || !state.lastRefresh ? 'Carregando o histórico…' : 'Ainda não há registros neste período.';
+      box.querySelector('.chart-empty').textContent = state.data ? 'Ainda não há registros neste período.' : 'Carregando o histórico…';
       chartModel = null;
       return;
     }
@@ -602,13 +497,11 @@ footer p { margin: 0; max-width: 70ch; }
     const y = v => M.t + ph - v / top * ph;
 
     let out = '';
-    // grade horizontal + eixo Y
     for (let v = 0; v <= top + 1e-6; v += step) {
       const yy = y(v).toFixed(1);
       out += `<line x1="${M.l}" x2="${M.l + pw}" y1="${yy}" y2="${yy}" stroke="${v === 0 ? 'var(--axis)' : 'var(--grid)'}" stroke-width="1"/>`;
       out += `<text x="${M.l - 8}" y="${yy}" text-anchor="end" dominant-baseline="middle">${v === 0 ? '0' : cf.format(v)}</text>`;
     }
-    // eixo X
     const ticks = [];
     if (state.period === 'day') {
       const d = new Date(t0); d.setMinutes(0, 0, 0);
@@ -625,7 +518,6 @@ footer p { margin: 0; max-width: 70ch; }
       out += `<line x1="${xx}" x2="${xx}" y1="${M.t + ph}" y2="${M.t + ph + 4}" stroke="var(--axis)"/>`;
       out += `<text x="${xx}" y="${M.t + ph + 17}" text-anchor="middle">${tk.s}</text>`;
     }
-    // linhas
     for (const s of series) {
       if (!s.pts.length) continue;
       const c = color(s.p.slot);
@@ -636,7 +528,6 @@ footer p { margin: 0; max-width: 70ch; }
       const last = s.pts[s.pts.length - 1];
       out += `<circle cx="${x(last.t).toFixed(1)}" cy="${y(last.y).toFixed(1)}" r="4" fill="${c}" stroke="var(--surface)" stroke-width="2"/>`;
     }
-    // rótulos diretos à direita, sem sobreposição
     const labels = series.filter(s => s.pts.length).map(s => {
       const last = s.pts[s.pts.length - 1];
       return { s, last, y: y(last.y) };
@@ -653,7 +544,6 @@ footer p { margin: 0; max-width: 70ch; }
       out += `<text class="lbl-name" x="${lx + 18}" y="${(l.y - 4).toFixed(1)}" dominant-baseline="middle">${esc(l.s.p.short)}</text>`;
       out += `<text class="lbl-val" x="${lx + 18}" y="${(l.y + 10).toFixed(1)}" dominant-baseline="middle">+${cf.format(l.last.y)}</text>`;
     }
-    // camada de hover
     out += `<g id="cross" style="display:none"><line id="cross-line" y1="${M.t}" y2="${M.t + ph}" stroke="var(--fg-2)" stroke-width="1" stroke-dasharray="3 3"/></g>`;
     out += `<rect class="chart-hit" id="chart-hit" x="${M.l}" y="${M.t}" width="${pw}" height="${ph}" fill="transparent" tabindex="0" aria-label="Explorar valores do gráfico com as setas"/>`;
     svg.innerHTML = out;
@@ -699,15 +589,13 @@ footer p { margin: 0; max-width: 70ch; }
     }
     tip.append(head, ul);
     tip.hidden = false;
-    const scale = svg.getBoundingClientRect().width / m.W;
-    const px = xx * scale;
-    const boxW = svg.getBoundingClientRect().width;
+    const rect = svg.getBoundingClientRect();
+    const px = xx * (rect.width / m.W);
     const tw = tip.offsetWidth;
-    tip.style.left = (px + 12 + tw > boxW ? Math.max(0, px - 12 - tw) : px + 12) + 'px';
+    tip.style.left = (px + 12 + tw > rect.width ? Math.max(0, px - 12 - tw) : px + 12) + 'px';
   }
   function hideTip() {
-    const svg = document.getElementById('chart');
-    const c = svg.querySelector('#cross'); if (c) c.style.display = 'none';
+    const c = document.querySelector('#chart #cross'); if (c) c.style.display = 'none';
     document.getElementById('tip').hidden = true;
   }
   function bindChart() {
@@ -740,13 +628,13 @@ footer p { margin: 0; max-width: 70ch; }
     const ref = vs.find(v => v.skills);
     const table = document.getElementById('skills');
     document.getElementById('skills-sub').textContent = `Nível atual e XP ganho em ${PERIODS[state.period].label}`;
-    if (!ref) { table.innerHTML = '<tbody><tr><td style="text-align:left;color:var(--muted)">Carregando…</td></tr></tbody>'; return; }
+    if (!ref) { table.innerHTML = `<tbody><tr><td style="text-align:left;color:var(--muted)">${state.data ? 'Sem dados' : 'Carregando…'}</td></tr></tbody>`; return; }
     const keys = Object.keys(ref.skills);
     const head = `<thead><tr><th scope="col">Skill</th>${vs.map(v => `<th scope="col"><span class="h"><span class="key" style="background:${color(v.p.slot)}"></span>${esc(v.p.short)}</span></th>`).join('')}</tr></thead>`;
     const rows = keys.map(k => {
       const gains = vs.map(v => (v.g && v.g[k] ? v.g[k].experience.gained : 0));
       const top = Math.max(...gains);
-      const cells = vs.map((v, i) => {
+      const cells = vs.map(v => {
         if (!v.skills || !v.skills[k]) return '<td>—</td>';
         const sk = v.skills[k];
         const gk = v.g && v.g[k];
@@ -755,7 +643,7 @@ footer p { margin: 0; max-width: 70ch; }
         const lead = top > 0 && gain === top;
         return `<td class="${lead ? 'lead' : ''}" title="${nf.format(sk.experience)} XP">
           <b>${nf.format(sk.level)}</b>${lvUp > 0 ? `<span class="lv">+${lvUp}</span>` : ''}
-          <span class="g ${gain > 0 ? 'pos' : ''}">${gain == null ? '…' : gain > 0 ? plus(gain) : '0'}</span></td>`;
+          <span class="g ${gain > 0 ? 'pos' : ''}">${gain == null ? '—' : gain > 0 ? plus(gain) : '0'}</span></td>`;
       }).join('');
       const name = k === 'overall' ? 'Total' : skillName(k);
       return `<tr class="${k === 'overall' ? 'total' : ''}"><th scope="row">${esc(name)}</th>${cells}</tr>`;
@@ -764,55 +652,25 @@ footer p { margin: 0; max-width: 70ch; }
   }
 
   // ---------- Eventos ----------
-  document.getElementById('period-seg').addEventListener('click', async e => {
+  document.getElementById('period-seg').addEventListener('click', e => {
     const b = e.target.closest('button[data-period]'); if (!b) return;
-    const period = b.dataset.period;
-    if (period === state.period) return;
-    state.period = period;
-    try { localStorage.setItem('gim-period', period); } catch (_) {}
+    state.period = b.dataset.period;
+    try { localStorage.setItem('gim-period', state.period); } catch (_) {}
     document.querySelectorAll('#period-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     render();
-    const needs = PLAYERS.some(p => state.p[p.name].details && !state.p[p.name].periods[period]);
-    if (needs && !state.busy) {
-      state.busy = true; state.progress = 'Carregando ganhos do período…'; renderStatus();
-      await loadPeriod(period);
-      state.busy = false; state.progress = '';
-      render();
-    }
   });
   document.querySelectorAll('#period-seg button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.period === state.period)));
-  document.getElementById('refresh-btn').addEventListener('click', () => refreshAll({ manual: true }));
 
   let rz = 0;
   new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(renderChart); }).observe(document.getElementById('chart-box'));
 
-  // relógio: contagem regressiva e disparo da atualização de hora em hora
-  setInterval(() => {
-    if (!state.busy && state.nextRefresh && Date.now() >= state.nextRefresh) refreshAll();
-    else renderStatus();
-  }, 1000);
-  // a cada minuto, reescreve os "há X min" dos cartões
-  setInterval(() => { if (!state.busy) renderCards(); }, 60000);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !state.busy && state.nextRefresh && Date.now() >= state.nextRefresh) refreshAll();
-  });
+  // Com a página aberta: confere se já saiu um data.json novo e mantém os "há X min" em dia.
+  setInterval(() => { if (document.visibilityState === 'visible') loadData(); }, CHECK_EVERY_MS);
+  setInterval(() => { if (state.data) { renderStatus(); renderCards(); } }, 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadData(); });
 
-  // início: usa o cache se ainda estiver dentro da hora; senão, atualiza tudo
-  (async () => {
-    const cached = loadCache();
-    render();
-    if (cached && state.nextRefresh > Date.now()) {
-      const missing = PLAYERS.some(p => { const s = state.p[p.name]; return s.details && (!s.periods[state.period] || s.periods[state.period].error); });
-      if (missing) {
-        state.busy = true; state.progress = 'Carregando ganhos do período…'; renderStatus();
-        await loadPeriod(state.period);
-        state.busy = false; state.progress = '';
-        render();
-      }
-    } else {
-      refreshAll();
-    }
-  })();
+  render();
+  loadData();
 })();
 </script>
 </body>
