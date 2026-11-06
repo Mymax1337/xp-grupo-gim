@@ -296,14 +296,14 @@ tbody tr:not(.group):hover th, tbody tr:not(.group):hover td:not(.lead) { backgr
 .feed .tag { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; font-weight: 700; }
 
 /* Ficha do jogador */
-dialog#sheet {
+dialog#sheet, dialog#goal-dlg {
   padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg);
   width: min(940px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 48px); overflow: auto;
   box-shadow: 0 24px 80px var(--shade); overscroll-behavior: contain;
 }
-dialog#sheet::backdrop { background: rgb(12 9 5 / .62); }
+dialog#sheet::backdrop, dialog#goal-dlg::backdrop { background: rgb(12 9 5 / .62); }
 @media (max-width: 640px) {
-  dialog#sheet { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+  dialog#sheet, dialog#goal-dlg { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
 }
 .sheet { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 0 20px 24px; }
 .sh-head {
@@ -359,6 +359,78 @@ dialog#sheet::backdrop { background: rgb(12 9 5 / .62); }
 .cols { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 720px) { .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+/* Metas */
+@media (min-width: 641px) { dialog#goal-dlg { width: min(720px, calc(100% - 32px)); } }
+.btn-main { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
+.btn-main:hover { color: var(--gold-ink); filter: brightness(1.08); border-color: var(--gold); }
+.btn-main[disabled] { opacity: .6; cursor: wait; }
+.btn.lg { padding: 11px 16px; font-size: 14px; }
+.btn-danger { color: var(--bad); }
+.btn-danger:hover { border-color: var(--bad); color: var(--bad); }
+.linkish { all: unset; cursor: pointer; font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.linkish:hover { color: var(--fg); }
+.linkish:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.goals-body { display: grid; gap: 18px; }
+.goal-sec { display: grid; gap: 10px; }
+.goal-sec > h3 { margin: 0; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.goal-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
+.goal {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px;
+  display: grid; gap: 10px; align-content: start; cursor: pointer; transition: border-color .15s; min-width: 0;
+}
+.goal:hover { border-color: var(--axis); }
+.goal.done { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.g-top { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.g-ic { width: 38px; height: 38px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.ic.it { width: 32px; height: 32px; object-fit: contain; image-rendering: auto; }
+.g-top small { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.g-top h4 { margin: 0; font: 700 16px/1.25 var(--f-body); overflow-wrap: anywhere; }
+.g-badge { font: 700 11px/1 var(--f-body); color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 50%, transparent); border-radius: 999px; padding: 5px 8px; white-space: nowrap; }
+.g-meta { margin: 0; font-size: 12px; color: var(--fg-2); }
+.g-meta b { font-family: var(--f-mono); font-weight: 600; color: var(--fg); }
+.g-note { margin: 0; font-size: 13px; color: var(--fg-2); font-style: italic; overflow-wrap: anywhere; }
+.g-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.g-rows li { display: grid; grid-template-columns: 76px minmax(0, 1fr) 52px; gap: 8px; align-items: center; font-size: 12px; }
+.g-rows li > span:first-child { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.g-rows li > span:last-child { text-align: right; font-family: var(--f-mono); color: var(--fg-2); }
+.g-rows li.ok > span:last-child { color: var(--good); }
+.g-rows .prog { height: 4px; }
+.g-actions { display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; }
+.lock { display: grid; gap: 10px; padding: 4px 0; max-width: 560px; }
+.lock p { margin: 0; color: var(--fg-2); font-size: 14px; }
+.lock form { display: flex; gap: 8px; flex-wrap: wrap; }
+.lock .field { flex: 1 1 200px; }
+.field { font: 15px var(--f-body); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 9px 11px; min-width: 0; }
+.field:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.gform { gap: 18px; }
+.gf-row { display: grid; gap: 8px; min-width: 0; }
+.gf-label { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.gf-row > .seg { justify-self: start; }
+.sk-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 6px; }
+.sk-pick button {
+  display: flex; gap: 6px; align-items: center; font: 700 12px/1.1 var(--f-body); color: var(--fg-2); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 5px; padding: 4px 8px 4px 4px; cursor: pointer; text-align: left; min-width: 0;
+}
+.sk-pick button:hover { color: var(--fg); border-color: var(--axis); }
+.sk-pick button[aria-pressed="true"] { border-color: var(--gold); color: var(--fg); background: color-mix(in srgb, var(--gold) 14%, var(--surface)); }
+.lv-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.lv-row .field { width: 104px; font: 600 18px var(--f-mono); }
+.gf-info { margin: 0; font-size: 13px; color: var(--fg-2); }
+.gf-info b { color: var(--fg); font-family: var(--f-mono); font-weight: 600; }
+.gf-err { margin: 0; font-size: 13px; color: var(--bad); font-weight: 700; }
+.sugg { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; }
+.sugg button {
+  width: 100%; display: flex; gap: 10px; align-items: center; font: 14px var(--f-body); color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; cursor: pointer; text-align: left;
+}
+.sugg button:hover { border-color: var(--gold); }
+.sugg .free { color: var(--fg-2); font-style: italic; }
+.picked { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--gold); border-radius: var(--r); padding: 8px 12px; font-weight: 700; min-width: 0; }
+.picked .linkish { margin-left: auto; }
+.gf-foot { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-top: 14px; border-top: 1px solid var(--line); }
+.gf-foot .right { display: flex; gap: 8px; margin-left: auto; }
+.goals-foot { margin: 0; font-size: 12px; color: var(--muted); display: flex; gap: 6px 14px; flex-wrap: wrap; }
+
 footer { font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
 footer p { margin: 0; max-width: 72ch; }
 
@@ -413,6 +485,17 @@ footer p { margin: 0; max-width: 72ch; }
   <div id="banner"></div>
 
   <section class="cards" id="cards" aria-label="Jogadores"></section>
+
+  <section class="panel" aria-labelledby="goals-title" id="metas">
+    <div class="panel-head">
+      <div>
+        <h2 id="goals-title">Metas</h2>
+        <p class="sub">Metas do grupo e de cada jogador: um nível para alcançar ou um item para conseguir. O progresso de nível anda sozinho com os dados do Wise Old Man.</p>
+      </div>
+      <button type="button" class="btn btn-main" data-goal-new="" id="goal-new-btn" hidden>+ Nova meta</button>
+    </div>
+    <div id="goals"></div>
+  </section>
 
   <section class="panel" aria-labelledby="chart-title">
     <div class="panel-head">
@@ -486,6 +569,10 @@ footer p { margin: 0; max-width: 72ch; }
 
 <dialog id="sheet" aria-labelledby="sheet-name">
   <div class="sheet" id="sheet-body"></div>
+</dialog>
+
+<dialog id="goal-dlg" aria-labelledby="gf-title">
+  <form class="sheet gform" id="goal-form" novalidate></form>
 </dialog>
 
 <script>
@@ -826,7 +913,7 @@ footer p { margin: 0; max-width: 72ch; }
   // ---------- Renderização ----------
   function render() {
     bucketMemo = new Map();
-    renderStatus(); renderAwards(); renderSummary(); renderCards(); renderChart(); renderSkills(); renderBosses(); renderAch(); renderSheet();
+    renderStatus(); renderAwards(); renderSummary(); renderCards(); renderGoals(); renderChart(); renderSkills(); renderBosses(); renderAch(); renderSheet();
     syncButtons();
   }
   function syncButtons() {
@@ -1473,6 +1560,7 @@ footer p { margin: 0; max-width: 72ch; }
       { id: 'skills', label: 'Skills' },
       { id: 'bosses', label: 'Chefes e atividades', c: v.bosses.length + v.acts.length },
       { id: 'ach', label: 'Conquistas', c: achs.length },
+      { id: 'goals', label: 'Metas', c: goals.status === 'ready' ? goals.list.filter(g => g.escopo === 'individual' && g.jogador === p.name && !goalState(g).done).length : null },
     ];
     const tabsHtml = `<div class="tabs" role="tablist" aria-label="Seções da ficha">${tabs.map(t =>
       `<button type="button" class="tab" role="tab" id="tab-${t.id}" aria-controls="tp-${t.id}" aria-selected="${sh.tab === t.id}" data-tab="${t.id}" data-k="tab-${t.id}">${t.label}${t.c != null ? `<span class="c">${t.c}</span>` : ''}</button>`).join('')}</div>`;
@@ -1510,6 +1598,8 @@ footer p { margin: 0; max-width: 72ch; }
           ${rows.map(r => `<li><span>${named(r.metric, metricName(r.metric), 'm')}</span><span>${nf.format(r[valKey])}</span><span>${gmap[r.metric] ? '+' + nf.format(gmap[r.metric]) : ''}</span></li>`).join('')}
         </ul>` : `<p class="empty-note">Nenhum registro de ${title.toLowerCase()} ainda.</p>`;
       panel = `<div class="cols"><div>${listHtml('Chefes', bl, 'kills', gB)}</div><div>${listHtml('Atividades', al, 'score', gA)}</div></div>`;
+    } else if (sh.tab === 'goals') {
+      panel = goalsForPlayerHtml(p);
     } else {
       const known = achs.filter(a => a.t).sort((a, b) => b.t - a.t);
       const old = achs.filter(a => !a.t);
@@ -1527,6 +1617,418 @@ footer p { margin: 0; max-width: 72ch; }
     paint($('sheet-body'), headHtml + bar + stats + daily + tabsHtml + `<div class="tabpanel" role="tabpanel" id="tp-${sh.tab}" aria-labelledby="tab-${sh.tab}">${panel}</div>`);
   }
 
+  // ---------- Metas (Firebase) ----------
+  // Configuração do app web do Firebase. Não é segredo (vai para o navegador de todo mundo):
+  // quem protege as metas são as regras do Firestore, que só aceitam quem sabe o código do grupo.
+  const FIREBASE = {
+    apiKey: 'AIzaSyChPZx79X1S-HAGglPcCUGxCVZ_2g5nTHM',
+    authDomain: 'xp-grupo-gim.firebaseapp.com',
+    projectId: 'xp-grupo-gim',
+    storageBucket: 'xp-grupo-gim.firebasestorage.app',
+    messagingSenderId: '605352403875',
+    appId: '1:605352403875:web:3fa7ca37523b361f77f016',
+  };
+  const FB_V = '10.12.2';
+  const SKILL_ORDER = ['attack', 'strength', 'defence', 'ranged', 'prayer', 'magic', 'runecrafting', 'construction', 'hitpoints',
+    'agility', 'herblore', 'thieving', 'crafting', 'fletching', 'slayer', 'hunter', 'mining', 'smithing', 'fishing', 'cooking',
+    'firemaking', 'woodcutting', 'farming', 'sailing', 'overall'];
+  const MAX_TOTAL = 2376;   // 24 skills no 99
+  const goals = { status: 'off', list: [], code: null, error: '', filter: 'all', showDone: false, fs: null, db: null, unsub: null, marked: new Set() };
+
+  function goalsCodeFromUrl() {
+    const m = location.hash.match(/codigo=([a-z0-9]{8,64})/i);
+    if (m) { store.set('gim-codigo', m[1].toLowerCase()); history.replaceState(null, '', location.pathname + location.search); }
+  }
+  const goalsCol = () => goals.fs.collection(goals.db, 'grupos', goals.code, 'metas');
+  async function startGoals() {
+    if (goals.unsub) { goals.unsub(); goals.unsub = null; }
+    if (!FIREBASE) { goals.status = 'off'; return renderGoals(); }
+    goals.code = store.get('gim-codigo');
+    if (!goals.code) { goals.status = 'locked'; return renderGoals(); }
+    goals.status = 'loading';
+    renderGoals();
+    try {
+      if (!goals.fs) {   // o Firebase só é baixado aqui, depois que o resto da página já abriu
+        const [app, fs] = await Promise.all([
+          import(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-app.js`),
+          import(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-firestore.js`),
+        ]);
+        goals.fs = fs;
+        goals.db = fs.getFirestore(app.initializeApp(FIREBASE));
+      }
+      goals.unsub = goals.fs.onSnapshot(goalsCol(), snap => {
+        goals.list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        goals.status = 'ready';
+        renderGoals();
+        if (state.sheet.name) renderSheet();
+        autoMarkDone();
+      }, err => {
+        goals.status = err && err.code === 'permission-denied' ? 'badcode' : 'error';
+        goals.error = err ? err.message : '';
+        renderGoals();
+      });
+    } catch (e) {
+      goals.status = 'error';
+      goals.error = e.message;
+      renderGoals();
+    }
+  }
+
+  // Progresso de uma meta. Nível anda sozinho com os dados do WOM; item é marcado na mão.
+  function goalState(g) {
+    if (g.tipo === 'item') return { done: !!g.feito, rows: [], count: 0, pct: g.feito ? 1 : 0 };
+    const who = g.escopo === 'grupo' ? PLAYERS : PLAYERS.filter(p => p.name === g.jogador);
+    const total = g.skill === 'overall';
+    const rows = who.map(p => {
+      const sk = (view(p).skills || {})[g.skill];
+      if (!sk) return { p, known: false, reached: false, pct: 0 };
+      const cur = total ? sk.level : Math.max(0, sk.experience);
+      const target = total ? g.alvo : XP_AT[Math.min(99, Math.max(2, g.alvo))];
+      const start = Math.min(g.inicio && g.inicio[p.name] != null ? g.inicio[p.name] : 0, cur);
+      const reached = sk.level >= g.alvo;
+      const pct = reached ? 1 : Math.max(0, Math.min(1, (cur - start) / Math.max(1, target - start)));
+      const wk = view(p, 'week').g;
+      const gw = wk && wk[g.skill];
+      const perDay = gw ? (total ? gw.level.gained : gw.experience.gained) / 7 : 0;
+      const left = Math.max(0, target - cur);
+      return { p, known: true, level: sk.level, reached, pct, left, total, eta: reached ? 0 : perDay > 0 ? left / perDay : null };
+    });
+    const known = rows.length > 0 && rows.every(r => r.known);
+    const done = known ? rows.every(r => r.reached) : !!g.feito;
+    return { rows, known, done, count: rows.filter(r => r.reached).length, pct: rows.length ? sum(rows, r => r.pct) / rows.length : 0 };
+  }
+  const etaText = d => (d == null ? 'sem XP nessa skill nos últimos 7 dias'
+    : d < 1 ? 'menos de 1 dia no ritmo dos últimos 7 dias'
+    : d > 365 ? 'mais de 1 ano no ritmo dos últimos 7 dias'
+    : `~${Math.ceil(d)} ${Math.ceil(d) === 1 ? 'dia' : 'dias'} no ritmo dos últimos 7 dias`);
+  const itemImg = it => `https://oldschool.runescape.wiki/images/${encodeURIComponent((it.icone || `${it.nome}.png`).replace(/ /g, '_'))}`;
+  const shortOf = name => { const p = PLAYERS.find(x => x.name === name); return p ? p.short : name; };
+  const goalTitle = g => {
+    if (g.tipo === 'item') return g.item ? g.item.nome : 'Item';
+    const lvl = g.skill === 'overall' ? `nível total ${nf.format(g.alvo)}` : `${g.alvo} de ${skillName(g.skill)}`;
+    return g.escopo === 'grupo' ? `Todos com ${lvl}` : lvl[0].toUpperCase() + lvl.slice(1);
+  };
+  const tsDate = t => (t && t.toDate ? t.toDate() : null);
+  function sortGoals(list) {
+    const at = g => (tsDate(g.criadoEm) || new Date()).getTime();
+    return list.slice().sort((a, b) => at(b) - at(a));
+  }
+
+  function goalCard(g) {
+    const st = goalState(g);
+    const p = PLAYERS.find(x => x.name === g.jogador);
+    const kind = g.tipo === 'item' ? 'Item' : 'Nível';
+    const kicker = g.escopo === 'grupo' ? `Grupo · ${kind}` : `<span class="dot" style="background:${color(p ? p.slot : 1)}"></span>${esc(p ? p.short : g.jogador || '?')} · ${kind}`;
+    const ic = g.tipo === 'item' && g.item ? `<img class="ic it" src="${esc(itemImg(g.item))}" alt="" decoding="async">` : icon(g.skill || 'overall', 'm');
+    let body = '';
+    if (g.tipo === 'nivel') {
+      if (g.escopo === 'grupo') {
+        body = `<div class="prog"><i style="width:${(st.pct * 100).toFixed(1)}%;background:var(--gold)"></i></div>
+          <ul class="g-rows">${st.rows.map(r => `<li class="${r.reached ? 'ok' : ''}">
+            <span><span class="dot" style="background:${color(r.p.slot)}"></span>${esc(r.p.short)}</span>
+            <div class="prog"><i style="width:${(r.pct * 100).toFixed(1)}%;background:${color(r.p.slot)}"></i></div>
+            <span>${r.known ? (r.reached ? '✓ ' : '') + nf.format(r.level) : '—'}</span></li>`).join('')}</ul>
+          <p class="g-meta">${st.count} de ${st.rows.length} já chegaram</p>`;
+      } else {
+        const r = st.rows[0];
+        body = r && r.known
+          ? `<div class="prog"><i style="width:${(r.pct * 100).toFixed(1)}%;background:${color(p ? p.slot : 1)}"></i></div>
+             <p class="g-meta">${r.reached ? 'Chegou!' : `Nível <b>${nf.format(r.level)}</b> → ${nf.format(g.alvo)} · faltam <b>${r.total ? `${nf.format(r.left)} níveis` : `${cf.format(r.left)} XP`}</b><br>${etaText(r.eta)}`}</p>`
+          : '<p class="g-meta">Sem dados do jogador ainda.</p>';
+      }
+    } else if (st.done) {
+      const when = tsDate(g.feitoEm);
+      body = `<p class="g-meta">Conseguido${g.feitoPor ? ` por <b>${esc(shortOf(g.feitoPor))}</b>` : ''}${when ? ` em ${dm(when)}` : ''}</p>`;
+    }
+    const actions = [];
+    if (g.tipo === 'item') actions.push(st.done
+      ? `<button type="button" class="linkish" data-goal-undo="${esc(g.id)}" data-k="gu-${esc(g.id)}">Desfazer</button>`
+      : `<button type="button" class="btn" data-goal-done="${esc(g.id)}" data-k="gd-${esc(g.id)}">${g.escopo === 'grupo' ? 'Conseguimos!' : 'Consegui!'}</button>`);
+    actions.push(`<button type="button" class="linkish" data-goal-edit="${esc(g.id)}" data-k="ge-${esc(g.id)}">Editar</button>`);
+    return `<article class="goal${st.done ? ' done' : ''}" data-goal="${esc(g.id)}">
+        <div class="g-top"><span class="g-ic">${ic}</span><div><small>${kicker}</small><h4>${esc(goalTitle(g))}</h4></div>${st.done ? '<span class="g-badge">✓ Feita</span>' : ''}</div>
+        ${body}
+        ${g.nota ? `<p class="g-note">“${esc(g.nota)}”</p>` : ''}
+        <div class="g-actions">${actions.join('')}</div>
+      </article>`;
+  }
+
+  function renderGoals() {
+    const el = $('goals');
+    $('goal-new-btn').hidden = goals.status !== 'ready';
+    if (goals.status === 'off') { el.innerHTML = '<p class="empty-note">As metas ainda não foram ligadas neste site.</p>'; return; }
+    if (goals.status === 'locked' || goals.status === 'badcode') {
+      paint(el, `<div class="lock">
+          <p>${goals.status === 'badcode' ? '<b>Esse código não confere.</b> Confira o link do grupo e tente de novo.' : 'As metas são só do grupo. Abra o link do grupo, que já traz o código, ou digite o código aqui:'}</p>
+          <form id="code-form"><input class="field" id="code-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Código do grupo" aria-label="Código do grupo" data-k="code-input"><button class="btn btn-main lg" type="submit">Entrar</button></form>
+        </div>`);
+      return;
+    }
+    if (goals.status === 'loading') { el.innerHTML = '<p class="empty-note">Carregando metas…</p>'; return; }
+    if (goals.status === 'error') {
+      paint(el, `<p class="empty-note">Não consegui carregar as metas agora. <button type="button" class="linkish" data-goals-retry data-k="g-retry">Tentar de novo</button></p>`);
+      return;
+    }
+    const chips = [{ id: 'all', label: 'Todas' }, { id: 'grupo', label: 'Do grupo' }, ...PLAYERS.map(p => ({ id: p.name, label: p.short, slot: p.slot }))];
+    const vis = goals.list.filter(g => goals.filter === 'all' || (goals.filter === 'grupo' ? g.escopo === 'grupo' : g.escopo === 'individual' && g.jogador === goals.filter));
+    const open = sortGoals(vis.filter(g => !goalState(g).done));
+    const done = sortGoals(vis.filter(g => goalState(g).done));
+    const grp = open.filter(g => g.escopo === 'grupo');
+    const ind = open.filter(g => g.escopo !== 'grupo')
+      .sort((a, b) => PLAYERS.findIndex(p => p.name === a.jogador) - PLAYERS.findIndex(p => p.name === b.jogador));
+    const sec = (title, list) => (list.length ? `<div class="goal-sec"><h3>${title}</h3><div class="goal-grid">${list.map(goalCard).join('')}</div></div>` : '');
+    const empty = !goals.list.length
+      ? '<p class="empty-note">Nenhuma meta ainda. Toque em “+ Nova meta” para criar a primeira: um nível para alguém alcançar ou um item para conseguir.</p>'
+      : !open.length && !done.length ? '<p class="empty-note">Nenhuma meta neste filtro.</p>' : '';
+    paint(el, `<div class="goals-body">
+        <div class="chips" role="group" aria-label="Filtrar metas">${chips.map(c => `<button type="button" class="chip" data-gfilter="${esc(c.id)}" data-k="gfl-${esc(c.id)}" aria-pressed="${goals.filter === c.id}">${c.slot ? `<span class="dot" style="background:${color(c.slot)}"></span>` : ''}${esc(c.label)}</button>`).join('')}</div>
+        ${empty}${sec('Do grupo', grp)}${sec('Individuais', ind)}
+        ${done.length ? `<div class="goal-sec"><div><button type="button" class="btn" data-goals-showdone data-k="g-showdone">${goals.showDone ? 'Esconder' : 'Mostrar'} concluídas (${done.length})</button></div>${goals.showDone ? `<div class="goal-grid">${done.map(goalCard).join('')}</div>` : ''}</div>` : ''}
+        <p class="goals-foot"><span>As metas ficam salvas para todo o grupo e aparecem na hora para todos.</span><button type="button" class="linkish" data-goals-logout data-k="g-logout">Sair do grupo neste aparelho</button></p>
+      </div>`);
+  }
+
+  function goalsForPlayerHtml(p) {
+    if (goals.status !== 'ready') {
+      return `<p class="empty-note">${goals.status === 'loading' ? 'Carregando metas…' : 'As metas aparecem aqui depois que você entra com o código do grupo na seção Metas da página.'}</p>`;
+    }
+    const mine = goals.list.filter(g => g.escopo === 'individual' && g.jogador === p.name);
+    const open = sortGoals(mine.filter(g => !goalState(g).done));
+    const done = sortGoals(mine.filter(g => goalState(g).done));
+    const grp = sortGoals(goals.list.filter(g => g.escopo === 'grupo' && !goalState(g).done));
+    return `<div class="g-actions"><button type="button" class="btn btn-main lg" data-goal-new="${esc(p.name)}" data-k="gn-${esc(p.name)}">+ Nova meta para ${esc(p.short)}</button></div>
+      ${open.length ? `<div class="goal-grid">${open.map(goalCard).join('')}</div>` : `<p class="empty-note">${esc(p.short)} não tem metas em andamento.</p>`}
+      ${done.length ? `<div class="goal-sec"><h3>Concluídas</h3><div class="goal-grid">${done.map(goalCard).join('')}</div></div>` : ''}
+      ${grp.length ? `<div class="goal-sec"><h3>Metas do grupo</h3><div class="goal-grid">${grp.map(goalCard).join('')}</div></div>` : ''}`;
+  }
+
+  // Quando alguém abre o site e vê que uma meta de nível foi alcançada, ela fica marcada com a data.
+  function autoMarkDone() {
+    if (goals.status !== 'ready' || !state.source || !goals.fs) return;
+    const { doc, updateDoc, serverTimestamp } = goals.fs;
+    for (const g of goals.list) {
+      if (g.tipo !== 'nivel' || g.feito || goals.marked.has(g.id)) continue;
+      const st = goalState(g);
+      if (st.known && st.done) {
+        goals.marked.add(g.id);
+        updateDoc(doc(goalsCol(), g.id), { feito: true, feitoEm: serverTimestamp(), atualizadoEm: serverTimestamp() }).catch(() => {});
+      }
+    }
+  }
+  function markItem(id, done) {
+    const g = goals.list.find(x => x.id === id);
+    if (!g || !goals.fs) return;
+    const { doc, updateDoc, serverTimestamp } = goals.fs;
+    const eu = store.get('gim-eu');
+    const by = g.escopo === 'individual' ? g.jogador : PLAYERS.some(p => p.name === eu) ? eu : null;
+    updateDoc(doc(goalsCol(), id), { feito: done, feitoEm: done ? serverTimestamp() : null, feitoPor: done ? by : null, atualizadoEm: serverTimestamp() })
+      .catch(e => alert(`Não consegui salvar: ${e.message}`));
+  }
+
+  // ---------- Formulário de meta ----------
+  const gdlg = $('goal-dlg');
+  let gf = null;
+  let itemsCache = null;
+  function curLevel(name, skill) {
+    const p = PLAYERS.find(x => x.name === name);
+    const sk = p && (view(p).skills || {})[skill];
+    return sk ? sk.level : null;
+  }
+  function baseLevel() {   // referência para "+1", "+5"…: o jogador escolhido ou, no grupo, quem está mais atrás
+    if (!gf.skill) return null;
+    const lv = (gf.escopo === 'grupo' ? PLAYERS.map(p => p.name) : [gf.jogador]).filter(Boolean).map(n => curLevel(n, gf.skill)).filter(x => x != null);
+    return lv.length ? Math.min(...lv) : null;
+  }
+  function openGoalForm(id, preset = {}) {
+    if (goals.status !== 'ready') return;
+    const g = id ? goals.list.find(x => x.id === id) : null;
+    const eu = store.get('gim-eu');
+    gf = g
+      ? { id, escopo: g.escopo, jogador: g.jogador, tipo: g.tipo, skill: g.skill, alvo: g.alvo, item: g.item, nota: g.nota || '', q: '', err: '', del: false, saving: false }
+      : { id: null, escopo: 'individual', jogador: preset.jogador || (PLAYERS.some(p => p.name === eu) ? eu : null), tipo: 'nivel', skill: null, alvo: null, item: null, nota: '', q: '', err: '', del: false, saving: false };
+    renderGoalForm();
+    if (!gdlg.open) gdlg.showModal();
+    gdlg.scrollTop = 0;
+    if (gf.tipo === 'item') loadItems();
+  }
+  function gfInfo() {
+    if (gf.tipo !== 'nivel' || !gf.skill) return '';
+    const total = gf.skill === 'overall';
+    const name = total ? 'nível total' : skillName(gf.skill);
+    if (gf.escopo === 'grupo') {
+      return `Hoje em ${esc(name)}: ${PLAYERS.map(p => `${esc(p.short)} <b>${curLevel(p.name, gf.skill) ?? '—'}</b>`).join(' · ')}`;
+    }
+    if (!gf.jogador) return 'Escolha o jogador.';
+    const p = PLAYERS.find(x => x.name === gf.jogador);
+    const sk = (view(p).skills || {})[gf.skill];
+    if (!sk) return 'Sem dados desse jogador ainda.';
+    if (!gf.alvo || gf.alvo <= sk.level) return `${esc(p.short)} está no nível <b>${nf.format(sk.level)}</b> de ${esc(name)}.`;
+    const left = total ? `${nf.format(gf.alvo - sk.level)} níveis` : `${nf.format(Math.max(0, XP_AT[Math.min(99, gf.alvo)] - Math.max(0, sk.experience)))} XP`;
+    return `${esc(p.short)} está no nível <b>${nf.format(sk.level)}</b> de ${esc(name)}. Para o ${nf.format(gf.alvo)} faltam <b>${left}</b>.`;
+  }
+  function renderGoalForm() {
+    if (!gf) return;
+    const seg = (attr, opts, cur, label) => `<div class="seg" role="group" aria-label="${label}">${opts.map(([v, l]) => `<button type="button" data-${attr}="${v}" data-k="${attr}-${v}" aria-pressed="${cur === v}">${l}</button>`).join('')}</div>`;
+    let what = '';
+    if (gf.tipo === 'nivel') {
+      const base = baseLevel();
+      const max = gf.skill === 'overall' ? MAX_TOTAL : 99;
+      const quick = gf.skill === 'overall' ? [10, 50, 100] : [1, 5, 10];
+      what = `
+        <div class="gf-row"><span class="gf-label">Skill</span>
+          <div class="sk-pick">${SKILL_ORDER.map(k => `<button type="button" data-gf-skill="${k}" data-k="gfs-${k}" aria-pressed="${gf.skill === k}">${icon(k)}<span>${k === 'overall' ? 'Nível total' : esc(skillName(k))}</span></button>`).join('')}</div>
+        </div>
+        ${gf.skill ? `<div class="gf-row"><label class="gf-label" for="gf-alvo">Nível alvo</label>
+          <div class="lv-row">
+            <input class="field" type="number" id="gf-alvo" inputmode="numeric" min="2" max="${max}" value="${gf.alvo ?? ''}" data-k="gf-alvo">
+            ${base != null ? quick.map(n => `<button type="button" class="btn" data-gf-quick="${Math.min(max, base + n)}" data-k="gfq-${n}">${nf.format(Math.min(max, base + n))}</button>`).join('') : ''}
+            <button type="button" class="btn" data-gf-quick="${max}" data-k="gfq-max">${max === 99 ? '99' : 'Max'}</button>
+          </div>
+          <p class="gf-info" id="gf-info">${gfInfo()}</p></div>` : ''}`;
+    } else {
+      what = `<div class="gf-row"><label class="gf-label" for="gf-q">Item</label>
+        ${gf.item ? `<div class="picked"><img class="ic it" src="${esc(itemImg(gf.item))}" alt="">${esc(gf.item.nome)}<button type="button" class="linkish" data-gf-unpick data-k="gf-unpick">Trocar</button></div>`
+          : `<input class="field" id="gf-q" autocomplete="off" spellcheck="false" placeholder="Busque um item (ex.: Abyssal whip, Fire cape)" value="${esc(gf.q)}" data-k="gf-q">
+             <ul class="sugg" id="gf-sugg">${suggHtml()}</ul>`}
+      </div>`;
+    }
+    const html = `
+      <header class="sh-head">
+        <div class="sh-id"><div><small>Metas</small><h2 id="gf-title" tabindex="-1" style="outline:none">${gf.id ? 'Editar meta' : 'Nova meta'}</h2></div></div>
+        <div class="sh-nav"><button type="button" class="icon-btn" data-gf-close data-k="gf-x" aria-label="Fechar" title="Fechar (Esc)">✕</button></div>
+      </header>
+      <div class="gf-row"><span class="gf-label">Para quem</span>${seg('gf-escopo', [['individual', 'Um jogador'], ['grupo', 'O grupo todo']], gf.escopo, 'Para quem é a meta')}</div>
+      ${gf.escopo === 'individual' ? `<div class="gf-row"><span class="gf-label">Jogador</span><div class="chips" role="group" aria-label="Jogador">${PLAYERS.map(p => `<button type="button" class="chip" data-gf-player="${esc(p.name)}" data-k="gfp-${esc(p.name)}" aria-pressed="${gf.jogador === p.name}"><span class="dot" style="background:${color(p.slot)}"></span>${esc(p.short)}</button>`).join('')}</div></div>` : ''}
+      <div class="gf-row"><span class="gf-label">Tipo de meta</span>${seg('gf-tipo', [['nivel', 'Nível'], ['item', 'Item']], gf.tipo, 'Tipo de meta')}</div>
+      ${what}
+      <div class="gf-row"><label class="gf-label" for="gf-nota">Observação (opcional)</label>
+        <input class="field" id="gf-nota" maxlength="200" placeholder="Ex.: antes do Natal, para fazer Zulrah…" value="${esc(gf.nota)}" data-k="gf-nota"></div>
+      ${gf.err ? `<p class="gf-err" role="alert">${esc(gf.err)}</p>` : ''}
+      <div class="gf-foot">
+        ${gf.id ? `<button type="button" class="btn btn-danger" data-gf-del data-k="gf-del">${gf.del ? 'Toque de novo para apagar' : 'Apagar meta'}</button>` : ''}
+        <div class="right">
+          <button type="button" class="btn lg" data-gf-close data-k="gf-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-main lg" data-k="gf-save"${gf.saving ? ' disabled' : ''}>${gf.saving ? 'Salvando…' : 'Salvar meta'}</button>
+        </div>
+      </div>`;
+    paint($('goal-form'), html);
+  }
+  async function loadItems() {
+    if (itemsCache) return;
+    itemsCache = [];
+    try {
+      const r = await fetch('items.json', { cache: 'force-cache' });
+      if (r.ok) itemsCache = (await r.json()).map(x => ({ id: x[0], nome: x[1], icone: x[2] || null, low: x[1].toLowerCase() }));
+    } catch (_) { /* sem lista: dá para digitar o nome livre */ }
+    const ul = $('gf-sugg'); if (ul) ul.innerHTML = suggHtml();
+  }
+  let suggList = [];
+  function suggHtml() {
+    const q = gf.q.trim().toLowerCase();
+    if (q.length < 2) { suggList = []; return ''; }
+    const words = q.split(/\s+/);
+    const hits = (itemsCache || []).filter(x => words.every(w => x.low.includes(w)));
+    hits.sort((a, b) => (b.low.startsWith(q) - a.low.startsWith(q)) || a.nome.length - b.nome.length);
+    suggList = hits.slice(0, 8);
+    const exact = suggList.some(x => x.low === q);
+    return suggList.map((x, i) => `<li><button type="button" data-gf-pick="${i}"><img class="ic it" src="${esc(itemImg(x))}" alt="" loading="lazy">${esc(x.nome)}</button></li>`).join('')
+      + (exact ? '' : `<li><button type="button" class="free" data-gf-free><span class="g-ic" style="width:32px;height:32px">?</span>Usar “${esc(gf.q.trim())}” (item fora da lista, como Fire cape ou pets)</button></li>`);
+  }
+  async function saveGoalForm() {
+    gf.err = '';
+    const max = gf.skill === 'overall' ? MAX_TOTAL : 99;
+    if (gf.escopo === 'individual' && !gf.jogador) gf.err = 'Escolha o jogador.';
+    else if (gf.tipo === 'nivel' && !gf.skill) gf.err = 'Escolha a skill.';
+    else if (gf.tipo === 'nivel' && !(Number.isInteger(gf.alvo) && gf.alvo >= 2 && gf.alvo <= max)) gf.err = `O nível alvo precisa ser um número de 2 a ${nf.format(max)}.`;
+    else if (gf.tipo === 'nivel' && gf.escopo === 'individual' && (curLevel(gf.jogador, gf.skill) ?? 0) >= gf.alvo) gf.err = `${shortOf(gf.jogador)} já está nesse nível. Escolha um nível maior.`;
+    else if (gf.tipo === 'item' && !gf.item) gf.err = 'Escolha um item da lista ou use o nome que você digitou.';
+    if (gf.err) return renderGoalForm();
+    const { doc, addDoc, setDoc, serverTimestamp } = goals.fs;
+    const nivel = gf.tipo === 'nivel';
+    const who = gf.escopo === 'grupo' ? PLAYERS : PLAYERS.filter(p => p.name === gf.jogador);
+    const old = gf.id ? goals.list.find(x => x.id === gf.id) : null;
+    const same = old && old.tipo === gf.tipo && old.escopo === gf.escopo && old.jogador === (gf.escopo === 'individual' ? gf.jogador : null)
+      && (nivel ? old.skill === gf.skill && old.alvo === gf.alvo : old.item && old.item.nome === gf.item.nome);
+    const inicio = nivel ? Object.fromEntries(who.map(p => {
+      const sk = (view(p).skills || {})[gf.skill];
+      return [p.name, sk ? (gf.skill === 'overall' ? sk.level : Math.max(0, sk.experience)) : 0];
+    })) : null;
+    const data = {
+      escopo: gf.escopo,
+      jogador: gf.escopo === 'individual' ? gf.jogador : null,
+      tipo: gf.tipo,
+      skill: nivel ? gf.skill : null,
+      alvo: nivel ? gf.alvo : null,
+      inicio: same && old.inicio ? old.inicio : inicio,
+      item: nivel ? null : { id: gf.item.id ?? null, nome: gf.item.nome.slice(0, 100), icone: gf.item.icone ?? null },
+      feito: same ? !!old.feito : false,
+      feitoEm: same ? old.feitoEm ?? null : null,
+      feitoPor: same ? old.feitoPor ?? null : null,
+      nota: gf.nota.trim().slice(0, 200) || null,
+      atualizadoEm: serverTimestamp(),
+    };
+    if (gf.escopo === 'individual') store.set('gim-eu', gf.jogador);
+    gf.saving = true;
+    renderGoalForm();
+    try {
+      if (gf.id) await setDoc(doc(goalsCol(), gf.id), data, { merge: true });
+      else await addDoc(goalsCol(), { ...data, criadoEm: serverTimestamp() });
+      gdlg.close();
+    } catch (e) {
+      gf.saving = false;
+      gf.err = e && e.code === 'permission-denied' ? 'Não consegui salvar: o código do grupo não confere.' : `Não consegui salvar: ${e.message}`;
+      renderGoalForm();
+    }
+  }
+  gdlg.addEventListener('click', e => {
+    if (e.target === gdlg) {   // clique fora do formulário fecha
+      const r = gdlg.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) gdlg.close();
+      return;
+    }
+    const b = e.target.closest('button'); if (!b || !gf) return;
+    const ds = b.dataset;
+    if ('gfClose' in ds) return gdlg.close();
+    if (ds.gfEscopo) { gf.escopo = ds.gfEscopo; gf.err = ''; return renderGoalForm(); }
+    if (ds.gfPlayer) {
+      gf.jogador = ds.gfPlayer; gf.err = '';
+      if (gf.tipo === 'nivel' && gf.skill) { const lv = curLevel(gf.jogador, gf.skill); if (lv != null && (!gf.alvo || gf.alvo <= lv)) gf.alvo = Math.min(gf.skill === 'overall' ? MAX_TOTAL : 99, lv + 1); }
+      return renderGoalForm();
+    }
+    if (ds.gfTipo) { gf.tipo = ds.gfTipo; gf.err = ''; renderGoalForm(); if (gf.tipo === 'item') { loadItems(); const q = $('gf-q'); if (q) q.focus(); } return; }
+    if (ds.gfSkill) {
+      gf.skill = ds.gfSkill; gf.err = '';
+      const base = baseLevel();
+      const max = gf.skill === 'overall' ? MAX_TOTAL : 99;
+      gf.alvo = base != null ? Math.min(max, base + 1) : null;
+      return renderGoalForm();
+    }
+    if (ds.gfQuick) { gf.alvo = Number(ds.gfQuick); gf.err = ''; return renderGoalForm(); }
+    if (ds.gfPick) { gf.item = suggList[Number(ds.gfPick)]; gf.err = ''; return renderGoalForm(); }
+    if ('gfFree' in ds) { const nome = gf.q.trim().slice(0, 100); if (nome) gf.item = { id: null, nome: nome[0].toUpperCase() + nome.slice(1), icone: null }; gf.err = ''; return renderGoalForm(); }
+    if ('gfUnpick' in ds) { gf.item = null; renderGoalForm(); const q = $('gf-q'); if (q) q.focus(); return; }
+    if ('gfDel' in ds) {
+      if (!gf.del) { gf.del = true; return renderGoalForm(); }
+      const { doc, deleteDoc } = goals.fs;
+      deleteDoc(doc(goalsCol(), gf.id)).then(() => gdlg.close()).catch(err => { gf.err = `Não consegui apagar: ${err.message}`; renderGoalForm(); });
+    }
+  });
+  gdlg.addEventListener('input', e => {
+    if (!gf) return;
+    if (e.target.id === 'gf-alvo') { gf.alvo = e.target.value === '' ? null : Math.round(Number(e.target.value)); const i = $('gf-info'); if (i) i.innerHTML = gfInfo(); }
+    if (e.target.id === 'gf-q') { gf.q = e.target.value; $('gf-sugg').innerHTML = suggHtml(); }
+    if (e.target.id === 'gf-nota') gf.nota = e.target.value;
+  });
+  gdlg.addEventListener('close', () => { gf = null; });
+  document.addEventListener('submit', e => {
+    if (e.target.id === 'goal-form') { e.preventDefault(); if (gf && !gf.saving) saveGoalForm(); }
+    if (e.target.id === 'code-form') {
+      e.preventDefault();
+      const v = $('code-input').value.trim().toLowerCase().replace(/^.*codigo=/, '');
+      if (v) { store.set('gim-codigo', v); startGoals(); }
+    }
+  });
+
   // ---------- Eventos ----------
   function setPeriod(k) {
     if (!PERIODS[k] || k === state.period) return;
@@ -1535,10 +2037,19 @@ footer p { margin: 0; max-width: 72ch; }
     render();
   }
   document.addEventListener('click', e => {
-    const t = e.target.closest('button, a, article.card');
+    const t = e.target.closest('button, a, article.card, article.goal');
     if (!t) return;
     const ds = t.dataset;
     if (ds.period) return setPeriod(ds.period);
+    if ('goalNew' in ds) return openGoalForm(null, { jogador: ds.goalNew || null });
+    if (ds.goalDone) return markItem(ds.goalDone, true);
+    if (ds.goalUndo) return markItem(ds.goalUndo, false);
+    if (ds.goalEdit) return openGoalForm(ds.goalEdit);
+    if (ds.gfilter) { goals.filter = ds.gfilter; return renderGoals(); }
+    if ('goalsShowdone' in ds) { goals.showDone = !goals.showDone; return renderGoals(); }
+    if ('goalsRetry' in ds) return startGoals();
+    if ('goalsLogout' in ds) { store.set('gim-codigo', ''); return startGoals(); }
+    if (t.matches('article.goal')) return openGoalForm(t.dataset.goal);
     if (ds.mode) { state.chartMode = ds.mode; store.set('gim-chart', ds.mode); syncButtons(); return renderChart(); }
     if (ds.toggle) {
       state.hidden.has(ds.toggle) ? state.hidden.delete(ds.toggle) : state.hidden.add(ds.toggle);
@@ -1619,8 +2130,10 @@ footer p { margin: 0; max-width: 72ch; }
   }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadData(); });
 
+  goalsCodeFromUrl();
   render();
-  loadData().then(fromHash);
+  loadData().then(() => { fromHash(); autoMarkDone(); });
+  startGoals();
 })();
 </script>
 </body>

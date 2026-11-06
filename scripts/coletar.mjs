@@ -3,6 +3,7 @@
 // Uso: node scripts/coletar.mjs <arquivo-de-saida.json>
 
 import { writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 const PLAYERS = ['GIM Serasa', 'GIM Skol', 'GIM Zezinho', 'GIM Elite Br'];
 const API = 'https://api.wiseoldman.net/v2';
@@ -149,3 +150,23 @@ if (!players.some(p => p.details && !p.error)) {
 
 await writeFile(OUT, JSON.stringify({ generatedAt: new Date().toISOString(), players }));
 console.log(`Gravado ${OUT}`);
+
+// Lista de itens do jogo (wiki do OSRS) para a busca de metas de item.
+// Cada item vira [id, nome] ou [id, nome, ícone] quando o arquivo do ícone não é "<nome>.png".
+const ITEMS_OUT = join(dirname(OUT), 'items.json');
+try {
+  const r = await fetch('https://prices.runescape.wiki/api/v1/osrs/mapping', { headers: HEADERS });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const items = (await r.json())
+    .filter(x => x && x.name && x.id)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(x => (x.icon && x.icon !== `${x.name}.png` ? [x.id, x.name, x.icon] : [x.id, x.name]));
+  await writeFile(ITEMS_OUT, JSON.stringify(items));
+  console.log(`Gravado ${ITEMS_OUT} (${items.length} itens)`);
+} catch (e) {
+  console.log(`Lista de itens indisponível (${e.message}); usando a publicada.`);
+  try {
+    const r = await fetch(SITE_DATA.replace('data.json', 'items.json'));
+    if (r.ok) await writeFile(ITEMS_OUT, await r.text());
+  } catch { /* a busca de itens aceita texto livre mesmo sem a lista */ }
+}
