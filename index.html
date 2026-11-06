@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>XP do Grupo GIM</title>
-<meta name="description" content="Acompanha o XP dos membros do grupo GIM de Old School RuneScape, atualizado a cada hora pelo Wise Old Man.">
+<meta name="description" content="Acompanha o XP, os chefes e as conquistas dos membros do grupo GIM de Old School RuneScape, atualizado a cada hora pelo Wise Old Man.">
 <script>
   // Começa a baixar os dados antes do resto da página; o parâmetro evita cópias antigas em cache.
   window.__gimData = fetch('data.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
@@ -13,8 +13,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
 <style>
-/* Layout: livro-caixa do salão do grupo — faixa de cabeçalho com os totais, uma linha de filtro de período,
-   cartões dos jogadores em ordem de XP ganho, gráfico de XP acumulado e, por fim, a tabela de skills. */
+/* Layout: livro-caixa do salão do grupo — faixa de cabeçalho com os totais, filtro de período,
+   cartões dos jogadores (clicáveis, abrem a ficha), gráfico com dois modos, tabela de skills,
+   chefes e conquistas lado a lado. */
 :root {
   color-scheme: dark;
   --bg: #171511;
@@ -36,6 +37,7 @@
   --s2: #d95926;
   --s3: #199e70;
   --s4: #c98500;
+  --shade: rgb(0 0 0 / .45);
   --f-display: "Pixelify Sans", "Courier New", monospace;
   --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -49,6 +51,7 @@
     --gold: #8f6200; --gold-ink: #fffaf0; --good: #006300; --warn: #8a5a00; --bad: #b52c2c;
     --grid: #ebe6dc; --axis: #c9c1b1;
     --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+    --shade: rgb(40 30 10 / .18);
   }
 }
 :root[data-theme="light"] {
@@ -58,10 +61,12 @@
   --gold: #8f6200; --gold-ink: #fffaf0; --good: #006300; --warn: #8a5a00; --bad: #b52c2c;
   --grid: #ebe6dc; --axis: #c9c1b1;
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --shade: rgb(40 30 10 / .18);
 }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+html:has(dialog[open]) { overflow: hidden; }
 body {
   margin: 0;
   background: var(--bg);
@@ -72,9 +77,13 @@ body {
   padding-block: 28px 48px;
 }
 a { color: inherit; }
+button { font-family: inherit; }
 a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
 .wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
 .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.up-txt { color: var(--good); }
+.key { display: inline-block; width: 16px; height: 3px; border-radius: 2px; flex: none; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
 
 /* Cabeçalho */
 .top { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between; }
@@ -88,24 +97,41 @@ h1 em { font-style: normal; color: var(--gold); }
 .status.late b { color: var(--warn); }
 
 /* Resumo do grupo */
-.summary { display: flex; flex-wrap: wrap; gap: 12px 40px; padding-block: 18px; border-block: 1px solid var(--line); }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 28px; padding-block: 18px; border-block: 1px solid var(--line); }
 .summary div { display: grid; gap: 2px; min-width: 0; }
 .summary span { font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
-.summary strong { font: 600 22px/1.2 var(--f-mono); font-variant-numeric: tabular-nums; }
+.summary strong { font: 600 22px/1.2 var(--f-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .summary strong.up { color: var(--good); }
+.summary small { font-size: 12px; color: var(--fg-2); }
 
-/* Filtro de período */
+/* Controles */
 .filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); padding: 3px; background: var(--surface); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); padding: 3px; background: var(--surface); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.tabpanel > .seg { justify-self: start; }
 .seg button {
   font: 700 13px/1 var(--f-body); color: var(--fg-2); background: transparent; border: 0; border-radius: 4px;
-  padding: 9px 14px; cursor: pointer;
+  padding: 9px 14px; cursor: pointer; white-space: nowrap;
 }
 .seg button:hover { color: var(--fg); background: var(--surface-2); }
 .seg button[aria-pressed="true"] { background: var(--gold); color: var(--gold-ink); }
+.seg.sm button { padding: 7px 11px; font-size: 12px; }
 .filters .hint { font-size: 13px; color: var(--muted); }
-
 .banner { border: 1px solid var(--bad); color: var(--fg); background: var(--surface); border-radius: var(--r); padding: 12px 14px; font-size: 14px; }
+.btn {
+  font: 700 12px/1 var(--f-body); color: var(--fg); background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 8px 11px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { border-color: var(--gold); color: var(--gold); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: 700 12px/1 var(--f-body); border: 1px solid var(--line); background: transparent; color: var(--fg-2);
+  border-radius: 999px; padding: 7px 11px; cursor: pointer; display: inline-flex; gap: 7px; align-items: center;
+}
+.chip:hover { color: var(--fg); border-color: var(--axis); }
+.chip[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); border-color: var(--fg-2); }
+.chip[aria-pressed="false"].toggle { opacity: .55; }
+.chip[aria-pressed="false"].toggle span:last-child { text-decoration: line-through; }
+.chip[aria-pressed="false"].toggle .key { background: transparent !important; box-shadow: inset 0 0 0 1px var(--muted); height: 6px; }
 
 /* Cartões dos jogadores */
 .cards { display: grid; gap: 16px; grid-template-columns: 1fr; }
@@ -113,49 +139,73 @@ h1 em { font-style: normal; color: var(--gold); }
 @media (min-width: 1000px) { .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .card {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
-  padding: 16px; display: grid; gap: 14px; align-content: start; min-width: 0;
+  padding: 16px; display: grid; gap: 14px; align-content: start; min-width: 0; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
 }
+.card:hover { border-color: var(--axis); box-shadow: 0 6px 22px var(--shade); }
 .card-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
-.rank { font: 700 26px/1 var(--f-display); color: var(--muted); min-width: 1.6em; }
+.rank { font: 600 24px/1 var(--f-mono); color: var(--muted); min-width: 1.6em; }
 .card.first .rank { color: var(--gold); }
 .who { min-width: 0; display: grid; gap: 2px; }
 .who small { font-size: 11px; letter-spacing: .14em; color: var(--muted); font-weight: 700; }
 .who h2 { margin: 0; font: 700 21px/1.15 var(--f-body); display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
-.key { display: inline-block; width: 16px; height: 3px; border-radius: 2px; flex: none; }
 .wom { font-size: 12px; color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .wom:hover { color: var(--fg); border-color: var(--fg-2); }
 .gain { display: grid; gap: 2px; }
-.gain span { font-size: 12px; color: var(--muted); }
+.gain > span { font-size: 12px; color: var(--muted); }
 .gain strong { font: 600 26px/1.15 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--good); overflow-wrap: anywhere; }
 .gain strong.zero { color: var(--fg-2); }
-.bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
-.bar i { display: block; height: 100%; border-radius: 3px; min-width: 2px; }
+.gain em { font-style: normal; font-size: 12px; color: var(--fg-2); }
+
+/* Barrinhas de XP por dia/hora (cartão e ficha) */
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 38px; border-bottom: 1px solid var(--axis); }
+.bars i { flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; cursor: default; }
+.bars i b { display: block; width: 100%; border-radius: 2px 2px 0 0; transition: opacity .12s; }
+.bars i.z b { height: 2px !important; background: var(--line) !important; border-radius: 1px; }
+.bars i.n b { height: 0 !important; }
+.bars i.e b { opacity: .4; background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--surface) 3px 4px) !important; }
+.est-note { margin: 0; font-size: 12px; color: var(--muted); }
+.bars:hover i b { opacity: .45; }
+.bars:hover i:hover b { opacity: 1; }
+.bars.tall { height: 110px; gap: 3px; }
+.readout { margin: 6px 0 0; font-size: 12px; color: var(--muted); min-height: 18px; }
+.readout b { color: var(--fg); font-weight: 700; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.bars-axis { display: flex; justify-content: space-between; font: 11px var(--f-mono); color: var(--muted); margin-top: 4px; }
+
 .stats { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; }
 .stats dt { color: var(--muted); }
 .stats dd { margin: 0; text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--fg); }
 .stats dd small { color: var(--good); font-size: 12px; }
+.stats dd small.down { color: var(--muted); }
 .tops { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
 .tops h3 { margin: 0; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .tops ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
 .tops li { display: flex; justify-content: space-between; gap: 8px; }
 .tops li span:last-child { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--fg-2); }
 .tops .empty { color: var(--muted); font-size: 13px; margin: 0; }
+.near { margin: 0; font-size: 12px; color: var(--fg-2); display: grid; gap: 4px; }
+.near .prog { height: 4px; }
+.card-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
 .fresh { margin: 0; font-size: 12px; color: var(--fg-2); display: flex; gap: 6px; align-items: baseline; }
 .fresh i { font-style: normal; }
 .fresh.ok i { color: var(--good); }
 .fresh.old i { color: var(--warn); }
 .fresh.err i { color: var(--bad); }
 .card .err-msg { margin: 0; font-size: 12px; color: var(--muted); }
+.prog { height: 5px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.prog i { display: block; height: 100%; border-radius: 3px; min-width: 2px; }
 
 /* Painéis */
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; }
-.panel-head { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; align-items: baseline; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; align-content: start; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: space-between; align-items: flex-start; }
+.panel-head > div:not(.seg) { display: grid; gap: 4px; min-width: 0; }
 .panel h2 { margin: 0; font: 700 20px/1.2 var(--f-display); text-wrap: balance; }
 .panel .sub { margin: 0; font-size: 13px; color: var(--muted); }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--fg-2); list-style: none; margin: 0; padding: 0; }
-.legend li { display: inline-flex; gap: 8px; align-items: center; }
+.tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between; }
+.duo { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) { .duo { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
 
-.chart-box { position: relative; min-width: 0; }
+.chart-box { position: relative; min-width: 0; touch-action: pan-y; }
 .chart-box svg { display: block; width: 100%; height: auto; overflow: visible; }
 .chart-box svg text { font-family: var(--f-mono); font-size: 11px; fill: var(--muted); }
 .chart-box svg .lbl-name { fill: var(--fg); font-family: var(--f-body); font-weight: 700; font-size: 12px; }
@@ -165,7 +215,7 @@ h1 em { font-style: normal; color: var(--gold); }
 .tip {
   position: absolute; top: 4px; pointer-events: none; z-index: 2;
   background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r);
-  padding: 10px 12px; font-size: 12px; min-width: 180px; box-shadow: 0 6px 20px rgb(0 0 0 / .25);
+  padding: 10px 12px; font-size: 12px; min-width: 180px; box-shadow: 0 6px 20px var(--shade);
 }
 .tip[hidden] { display: none; }
 .tip .t-date { color: var(--muted); margin-bottom: 6px; }
@@ -173,35 +223,126 @@ h1 em { font-style: normal; color: var(--gold); }
 .tip li { display: grid; grid-template-columns: 14px auto 1fr; gap: 8px; align-items: center; }
 .tip li b { font: 600 13px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--fg); }
 .tip li span:last-child { color: var(--fg-2); text-align: right; }
+.tip li.sum { border-top: 1px solid var(--line); padding-top: 4px; margin-top: 2px; }
 
-/* Tabela de skills */
+/* Tabelas */
 .table-scroll { overflow-x: auto; margin-inline: -18px; padding-inline: 18px; }
-table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+#skills { min-width: 560px; }
 th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
 thead th { font-weight: 700; color: var(--fg-2); font-size: 12px; border-bottom: 1px solid var(--line); vertical-align: bottom; }
 thead th .h { display: inline-flex; gap: 8px; align-items: center; }
-tbody th { text-align: left; font-weight: 700; color: var(--fg); position: sticky; left: 0; background: var(--surface); }
-thead th:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+tbody th { text-align: left; font-weight: 700; color: var(--fg); position: sticky; left: 0; background: var(--surface); z-index: 1; }
+thead th:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; }
+.sort { all: unset; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; padding: 2px 0; }
+.sort:hover { color: var(--fg); }
+.sort:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.sort .arr { font-size: 11px; color: var(--muted); width: 10px; }
+th[aria-sort="descending"] .sort { color: var(--fg); }
+th[aria-sort="descending"] .arr { color: var(--gold); }
 td b { font: 600 14px var(--f-mono); font-variant-numeric: tabular-nums; }
+td b.dim { color: var(--muted); font-weight: 400; }
 td .lv { color: var(--good); font: 500 11px var(--f-mono); margin-left: 4px; }
 td .g { display: block; font: 400 12px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--muted); }
 td .g.pos { color: var(--fg-2); }
+td .mini { display: block; height: 3px; width: 64px; margin: 5px 0 2px auto; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+td .mini i { display: block; height: 100%; }
 td.lead { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 td.lead .g { color: var(--gold); font-weight: 600; }
 tr.total th, tr.total td { border-bottom: 1px solid var(--line); background-clip: padding-box; }
 tr.total td b { font-size: 15px; }
+tr.group th { padding-top: 16px; font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+tbody tr:not(.group):hover th, tbody tr:not(.group):hover td:not(.lead) { background: var(--surface-2); }
 .table-note { margin: 0; font-size: 12px; color: var(--muted); }
 .table-note mark { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold); padding: 1px 5px; border-radius: 3px; font-weight: 700; }
+.empty-note { margin: 0; padding: 18px 0; color: var(--muted); font-size: 14px; }
+
+/* Conquistas */
+.feed { list-style: none; margin: 0; padding: 0; display: grid; }
+.feed li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+.feed li:last-child { border-bottom: 0; }
+.feed .f-who { font-size: 12px; color: var(--fg-2); font-weight: 700; display: inline-flex; gap: 7px; align-items: center; }
+.feed .f-what { font-size: 14px; font-weight: 700; display: block; overflow-wrap: anywhere; }
+.feed time { font-size: 12px; color: var(--muted); white-space: nowrap; text-align: right; font-family: var(--f-mono); }
+.feed .tag { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; font-weight: 700; }
+
+/* Ficha do jogador */
+dialog#sheet {
+  padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg);
+  width: min(940px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 48px); overflow: auto;
+  box-shadow: 0 24px 80px var(--shade); overscroll-behavior: contain;
+}
+dialog#sheet::backdrop { background: rgb(12 9 5 / .62); }
+@media (max-width: 640px) {
+  dialog#sheet { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+}
+.sheet { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 0 20px 24px; }
+.sh-head {
+  position: sticky; top: 0; z-index: 3; background: var(--bg); margin-inline: -20px; padding: 14px 20px;
+  border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.sh-id { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.sh-id .key { width: 6px; height: 34px; border-radius: 3px; }
+.sh-id small { display: block; font-size: 11px; letter-spacing: .12em; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+.sh-id h2 { margin: 0; font: 700 24px/1.1 var(--f-body); overflow-wrap: anywhere; }
+.sh-nav { display: flex; gap: 6px; flex: none; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface);
+  color: var(--fg); font: 700 16px/1 var(--f-body); cursor: pointer; display: inline-grid; place-items: center;
+}
+.icon-btn:hover { border-color: var(--gold); color: var(--gold); }
+.sh-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.sh-bar .wom { font-size: 13px; }
+.sh-stats { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.sh-stats div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 2px; align-content: start; }
+.sh-stats dt { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.sh-stats dd { margin: 0; font: 600 18px/1.25 var(--f-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sh-stats dd.up { color: var(--good); }
+.sh-stats dd small { display: block; font: 400 12px var(--f-body); color: var(--fg-2); }
+.sh-sec { display: grid; gap: 8px; }
+.sh-sec h3 { margin: 0; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tab {
+  font: 700 14px/1 var(--f-body); color: var(--fg-2); background: none; border: 0;
+  padding: 12px 12px 13px; cursor: pointer; white-space: nowrap;
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); box-shadow: inset 0 -2px 0 var(--gold); }
+.tab .c { font: 500 11px var(--f-mono); color: var(--muted); margin-left: 4px; }
+.tabpanel { display: grid; gap: 14px; }
+.sk-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 10px; }
+.sk { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 6px; }
+.sk.up { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.sk.max { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.sk-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sk-name { font-weight: 700; font-size: 13px; }
+.sk-lv { font: 600 20px/1 var(--f-mono); font-variant-numeric: tabular-nums; }
+.sk-lv small { font-size: 11px; color: var(--good); margin-left: 3px; }
+.sk-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 6px; font: 11px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sk-foot span { white-space: nowrap; }
+.sk-foot .g { color: var(--good); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; }
+.list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); align-items: baseline; font-size: 14px; }
+.list li span:nth-child(2) { font: 600 14px var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.list li span:nth-child(3) { font: 12px var(--f-mono); color: var(--good); min-width: 4.5em; text-align: right; }
+.list li.head { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding-top: 0; }
+.list li.head span { font: inherit !important; color: inherit !important; }
+.cols { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 720px) { .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 footer { font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
-footer p { margin: 0; max-width: 70ch; }
+footer p { margin: 0; max-width: 72ch; }
 
 @media (max-width: 560px) {
   body { padding-block: 20px 40px; }
   .status { justify-items: start; text-align: left; }
-  .summary strong { font-size: 19px; }
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary strong { font-size: 18px; }
   .panel { padding: 14px; }
   .table-scroll { margin-inline: -14px; padding-inline: 14px; }
+  .sheet { padding: 0 16px 24px; }
+  .sh-head { margin-inline: -16px; padding: 12px 16px; }
+  .sk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
@@ -222,11 +363,11 @@ footer p { margin: 0; max-width: 70ch; }
 
   <div class="filters">
     <div class="seg" role="group" aria-label="Período" id="period-seg">
-      <button type="button" id="p-day" data-period="day" aria-pressed="false">24 horas</button>
-      <button type="button" id="p-week" data-period="week" aria-pressed="true">7 dias</button>
-      <button type="button" id="p-month" data-period="month" aria-pressed="false">30 dias</button>
+      <button type="button" data-period="day" aria-pressed="false">24 horas</button>
+      <button type="button" data-period="week" aria-pressed="true">7 dias</button>
+      <button type="button" data-period="month" aria-pressed="false">30 dias</button>
     </div>
-    <span class="hint">Ranking pelo XP ganho no período</span>
+    <span class="hint">Ranking pelo XP ganho no período · toque num jogador para ver a ficha</span>
   </div>
 
   <div id="banner"></div>
@@ -237,31 +378,74 @@ footer p { margin: 0; max-width: 70ch; }
     <div class="panel-head">
       <div>
         <h2 id="chart-title">XP ganho no período</h2>
-        <p class="sub">Soma acumulada desde o início do período, a cada registro do Wise Old Man.</p>
+        <p class="sub" id="chart-sub"></p>
       </div>
-      <ul class="legend" id="chart-legend"></ul>
+      <div class="seg sm" role="group" aria-label="Tipo de gráfico" id="chart-mode">
+        <button type="button" data-mode="line" aria-pressed="true">Acumulado</button>
+        <button type="button" data-mode="bars" aria-pressed="false" id="mode-bars">Por dia</button>
+      </div>
     </div>
+    <div class="chips" id="chart-legend" role="group" aria-label="Mostrar ou esconder jogadores no gráfico"></div>
     <div class="chart-box" id="chart-box">
       <svg id="chart" role="img" aria-label="Gráfico de XP ganho por jogador"></svg>
       <div class="tip" id="tip" hidden></div>
     </div>
+    <p class="est-note" id="chart-note" hidden></p>
   </section>
 
   <section class="panel" aria-labelledby="skills-title">
     <div class="panel-head">
-      <h2 id="skills-title">Skills</h2>
-      <p class="sub" id="skills-sub">Nível atual e XP ganho no período</p>
+      <div>
+        <h2 id="skills-title">Skills</h2>
+        <p class="sub" id="skills-sub"></p>
+      </div>
+      <div class="seg sm" role="group" aria-label="O que mostrar na tabela" id="skill-mode">
+        <button type="button" data-skmode="gained" aria-pressed="true">XP ganho</button>
+        <button type="button" data-skmode="level" aria-pressed="false">Nível</button>
+      </div>
     </div>
     <div class="table-scroll">
       <table id="skills"></table>
     </div>
-    <p class="table-note"><mark>Destaque</mark> marca quem mais ganhou XP naquela skill no período.</p>
+    <p class="table-note" id="skills-note"></p>
   </section>
+
+  <div class="duo">
+    <section class="panel" aria-labelledby="boss-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="boss-title">Chefes e atividades</h2>
+          <p class="sub" id="boss-sub"></p>
+        </div>
+        <div class="seg sm" role="group" aria-label="Abates totais ou do período" id="boss-mode">
+          <button type="button" data-bossmode="total" aria-pressed="true">Total</button>
+          <button type="button" data-bossmode="period" aria-pressed="false" id="boss-period-btn">No período</button>
+        </div>
+      </div>
+      <div class="table-scroll" id="bosses"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="ach-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="ach-title">Conquistas recentes</h2>
+          <p class="sub">99s, marcos de XP e de abates registrados pelo Wise Old Man.</p>
+        </div>
+      </div>
+      <div class="chips" id="ach-filter" role="group" aria-label="Filtrar conquistas por jogador"></div>
+      <div id="ach"></div>
+    </section>
+  </div>
 
   <footer>
     <p>Os números são atualizados automaticamente a cada hora com os dados do <a href="https://wiseoldman.net" target="_blank" rel="noopener">Wise Old Man</a>, que lê os hiscores oficiais do OSRS. A página só mostra o resultado já pronto, por isso abre na hora.</p>
+    <p>O XP por dia e por hora sai das leituras do Wise Old Man, feitas de hora em hora. O XP ganho entre duas leituras é dividido igualmente pelo tempo entre elas.</p>
   </footer>
 </div>
+
+<dialog id="sheet" aria-labelledby="sheet-name">
+  <div class="sheet" id="sheet-body"></div>
+</dialog>
 
 <script>
 (() => {
@@ -278,35 +462,68 @@ footer p { margin: 0; max-width: 70ch; }
   const CHECK_EVERY_MS = 5 * 60 * 1000;    // com a página aberta, confere a cada 5 min se já saiu
   const STALE_VIEW_MS = 75 * 60 * 1000;    // se os dados prontos passarem disso, busca direto no Wise Old Man
   const PERIODS = {
-    day:   { label: '24 horas', ms: 864e5 },
-    week:  { label: '7 dias',   ms: 7 * 864e5 },
-    month: { label: '30 dias',  ms: 30 * 864e5 },
+    day:   { label: '24 horas', ms: 864e5,      unit: 'hora', n: 24 },
+    week:  { label: '7 dias',   ms: 7 * 864e5,  unit: 'dia',  n: 7 },
+    month: { label: '30 dias',  ms: 30 * 864e5, unit: 'dia',  n: 30 },
   };
   const SKILL_NAMES = { runecrafting: 'Runecraft' };
+  const METRIC_NAMES = {
+    tztok_jad: 'TzTok-Jad', tzkal_zuk: 'TzKal-Zuk', kreearra: "Kree'arra", kril_tsutsaroth: "K'ril Tsutsaroth",
+    vetion: "Vet'ion", calvarion: "Calvar'ion", the_corrupted_gauntlet: 'Corrupted Gauntlet',
+    chambers_of_xeric_challenge_mode: 'Chambers of Xeric (CM)', theatre_of_blood_hard_mode: 'Theatre of Blood (HM)',
+    tombs_of_amascut_expert: 'Tombs of Amascut (Expert)', clue_scrolls_all: 'Clue scrolls (todas)',
+    collections_logged: 'Collection log', pvp_arena: 'PvP Arena', last_man_standing: 'Last Man Standing',
+    league_points: 'League points', soul_wars_zeal: 'Soul Wars zeal', colosseum_glory: 'Colosseum glory',
+  };
+  // XP necessário para cada nível (tabela oficial do OSRS).
+  const XP_AT = (() => { const t = [0, 0]; let pts = 0; for (let l = 1; l < 99; l++) { pts += Math.floor(l + 300 * 2 ** (l / 7)); t[l + 1] = Math.floor(pts / 4); } return t; })();
+  const MAX_XP = 200e6;
 
   // ---------- Estado ----------
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+  };
+  const emptyPlayer = () => ({ details: null, periods: {}, timeline: [], achievements: [], error: null, updateError: null });
   const state = {
     period: 'week',
     data: null,
     loadError: null,
-    source: null,                         // { kind: 'auto' (data.json) | 'live' (direto do WOM), at }
+    source: null,                          // { kind: 'auto' (data.json) | 'live' (direto do WOM), at }
     live: { busy: false, progress: '' },
-    p: Object.fromEntries(PLAYERS.map(p => [p.name, { details: null, periods: {}, error: null, updateError: null }])),
+    p: Object.fromEntries(PLAYERS.map(p => [p.name, emptyPlayer()])),
+    chartMode: 'line',
+    hidden: new Set(),
+    skillMode: 'gained',
+    skillSort: null,                       // nome do jogador cuja coluna ordena a tabela
+    bossMode: 'total',
+    bossAll: false,
+    achFilter: 'all',
+    achAll: false,
+    sheet: { name: null, tab: 'skills', sort: 'order' },
   };
-  try { const saved = localStorage.getItem('gim-period'); if (PERIODS[saved]) state.period = saved; } catch (_) {}
+  if (PERIODS[store.get('gim-period')]) state.period = store.get('gim-period');
+  if (store.get('gim-chart') === 'bars') state.chartMode = 'bars';
+  if (store.get('gim-skmode') === 'level') state.skillMode = 'level';
+  try { for (const n of JSON.parse(store.get('gim-hidden') || '[]')) if (PLAYERS.some(p => p.name === n)) state.hidden.add(n); } catch (_) {}
+  if (state.hidden.size >= PLAYERS.length) state.hidden.clear();
 
   // ---------- Formatação ----------
+  const $ = id => document.getElementById(id);
   const nf = new Intl.NumberFormat('pt-BR');
   const cf = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
-  const ehpf = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  const d1 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
   const WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
   const pad = n => String(n).padStart(2, '0');
   const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const dm = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const plus = n => (n > 0 ? '+' : '') + nf.format(n);
+  const cplus = n => (n > 0 ? '+' : '') + cf.format(n);
   const color = slot => `var(--s${slot})`;
   const enc = n => encodeURIComponent(n);
+  const slug = p => p.short.toLowerCase().replace(/\s+/g, '-');
+  const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
   function ago(ts) {
     const s = Math.max(0, (Date.now() - ts) / 1000);
     if (s < 90) return 'agora há pouco';
@@ -316,15 +533,30 @@ footer p { margin: 0; max-width: 70ch; }
     if (h < 48) return `há ${h} h`;
     return `há ${Math.round(h / 24)} dias`;
   }
-  const skillName = k => SKILL_NAMES[k] || k[0].toUpperCase() + k.slice(1);
+  const skillName = k => k === 'overall' ? 'Total' : SKILL_NAMES[k] || k[0].toUpperCase() + k.slice(1);
+  const metricName = k => METRIC_NAMES[k] || k.split('_').map((w, i) => (i && ['of', 'the', 'and'].includes(w)) ? w : w[0].toUpperCase() + w.slice(1)).join(' ');
+  function progress(xp, level) {
+    xp = Math.max(0, xp);
+    if (level >= 99) return { pct: Math.min(1, xp / MAX_XP), toNext: Math.max(0, MAX_XP - xp), next: null };
+    const a = XP_AT[level], b = XP_AT[level + 1];
+    return { pct: Math.max(0, Math.min(1, (xp - a) / (b - a))), toNext: Math.max(0, b - xp), next: level + 1 };
+  }
+  // Renderiza HTML num contêiner sem perder o foco do botão que o usuário acabou de usar.
+  function paint(el, html) {
+    const a = document.activeElement;
+    const key = a && el.contains(a) ? a.getAttribute('data-k') : null;
+    el.innerHTML = html;
+    if (key) { const n = el.querySelector(`[data-k="${CSS.escape(key)}"]`); if (n) n.focus({ preventScroll: true }); }
+  }
 
   // ---------- Dados prontos (data.json, gerado de hora em hora pelo GitHub) ----------
   function applyPlayer(name, src) {
     const periods = {};
-    for (const k of Object.keys(PERIODS)) {
-      if (src.periods && src.periods[k]) periods[k] = { gained: src.periods[k].gained, timeline: src.timeline || [] };
-    }
-    state.p[name] = { details: src.details || null, periods, error: src.error || null, updateError: src.updateError || null };
+    for (const k of Object.keys(PERIODS)) if (src.periods && src.periods[k]) periods[k] = { gained: src.periods[k].gained };
+    state.p[name] = {
+      details: src.details || null, periods, timeline: src.timeline || [],
+      achievements: src.achievements || [], error: src.error || null, updateError: src.updateError || null,
+    };
   }
   function applyAll(players, source) {
     for (const p of PLAYERS) applyPlayer(p.name, players.find(x => x.name === p.name) || {});
@@ -348,9 +580,7 @@ footer p { margin: 0; max-width: 70ch; }
       const at = Date.parse(data.generatedAt);
       if (!state.source || at > state.source.at) applyAll(data.players || [], { kind: 'auto', at });
     } catch (e) {
-      state.loadError = state.source
-        ? 'Não consegui buscar dados mais novos. Mostrando os últimos que carreguei.'
-        : null;
+      state.loadError = state.source ? 'Não consegui buscar dados mais novos. Mostrando os últimos que carreguei.' : null;
     }
     // Se a atualização automática atrasar, mostra o que já tem e busca números novos sem travar a página.
     if (!state.source || Date.now() - state.source.at > STALE_VIEW_MS) {
@@ -379,14 +609,11 @@ footer p { margin: 0; max-width: 70ch; }
     }
   }
   function readLive() {
-    try { return JSON.parse(localStorage.getItem(LIVE_KEY) || 'null'); } catch (_) { return null; }
+    try { return JSON.parse(store.get(LIVE_KEY) || 'null'); } catch (_) { return null; }
   }
   function snapshotOf(name) {
     const s = state.p[name];
-    const periods = {};
-    for (const [k, v] of Object.entries(s.periods)) periods[k] = { gained: v.gained };
-    const any = Object.values(s.periods)[0];
-    return { name, details: s.details, periods, timeline: any ? any.timeline : [] };
+    return { name, details: s.details, periods: s.periods, timeline: s.timeline, achievements: s.achievements };
   }
   async function refreshFromWom() {
     if (state.live.busy) return;
@@ -406,7 +633,7 @@ footer p { margin: 0; max-width: 70ch; }
         const timeline = (await wom(`${path}/snapshots/timeline?metric=overall&period=month`))
           .map(x => ({ value: x.value, date: x.date }))
           .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-        applyPlayer(p.name, { details, periods, timeline });
+        applyPlayer(p.name, { details, periods, timeline, achievements: state.p[p.name].achievements });
         ok++;
         render();
       } catch (_) { /* mantém o que já estava na tela para esse jogador */ }
@@ -414,9 +641,7 @@ footer p { margin: 0; max-width: 70ch; }
     state.live.busy = false;
     if (ok) {
       state.source = { kind: 'live', at: Date.now() };
-      try {
-        localStorage.setItem(LIVE_KEY, JSON.stringify({ at: state.source.at, players: PLAYERS.map(p => snapshotOf(p.name)) }));
-      } catch (_) {}
+      store.set(LIVE_KEY, JSON.stringify({ at: state.source.at, players: PLAYERS.map(p => snapshotOf(p.name)) }));
     } else if (!state.source) {
       state.loadError = 'Não consegui carregar os dados. Recarregue a página em alguns minutos.';
     }
@@ -424,24 +649,147 @@ footer p { margin: 0; max-width: 70ch; }
   }
 
   // ---------- Leitura dos dados ----------
+  // Ratings de PvP começam num valor fixo para todo mundo (2.500 e 500), então não contam como atividade.
+  const RATINGS = new Set(['pvp_arena', 'last_man_standing']);
+  // Serve tanto para o data.json enxuto quanto para as respostas completas do WOM (plano B).
+  const rankGain = o => {
+    if (!o || !o.rank) return 0;
+    if ('start' in o.rank && !(o.rank.start > 0 && o.rank.end > 0)) return 0;
+    return o.rank.gained || 0;
+  };
   function view(p, period = state.period) {
     const s = state.p[p.name];
     const d = s.details;
+    const data = d && d.latestSnapshot ? d.latestSnapshot.data : null;
+    const skills = data ? data.skills : null;
     const per = s.periods[period];
-    const skills = d && d.latestSnapshot && d.latestSnapshot.data ? d.latestSnapshot.data.skills : null;
-    const g = per && per.gained && per.gained.data ? per.gained.data.skills : null;
+    const gd = per && per.gained ? per.gained.data : null;
+    const g = gd ? gd.skills : null;
+    const bosses = data && data.bosses ? Object.values(data.bosses).filter(b => b.kills > 0) : [];
+    const acts = data && data.activities ? Object.values(data.activities).filter(a => a.score > 0 && !RATINGS.has(a.metric)) : [];
+    const bossesG = gd && gd.bosses ? Object.values(gd.bosses).filter(b => b.kills.gained > 0) : [];
+    const actsG = gd && gd.activities ? Object.values(gd.activities).filter(a => a.score.gained > 0 && !RATINGS.has(a.metric)) : [];
     return {
-      p, s, d, skills, g, per,
+      p, s, d, skills, g, gd,
       gained: g ? g.overall.experience.gained : null,
       levelsGained: g ? g.overall.level.gained : 0,
+      rankGained: g ? rankGain(g.overall) : 0,
+      bosses, acts, bossesG, actsG,
+      kc: sum(bosses, b => b.kills),
+      kcGained: sum(bossesG, b => b.kills.gained),
+      ehbGained: gd && gd.computed && gd.computed.ehb ? gd.computed.ehb.value.gained : null,
     };
   }
 
+  // Pontos da linha do tempo (XP total) prontos para conta.
+  const ptsCache = new WeakMap();
+  function points(name) {
+    const tl = state.p[name].timeline || [];
+    let pts = ptsCache.get(tl);
+    if (!pts) {
+      pts = tl.map(x => ({ t: Date.parse(x.date), v: x.value })).filter(x => x.v > 0 && !isNaN(x.t)).sort((a, b) => a.t - b.t);
+      ptsCache.set(tl, pts);
+    }
+    return pts;
+  }
+  // Leituras dentro do período. Como no Wise Old Man, o ganho conta a partir da primeira leitura do período.
+  function windowPts(name, period = state.period) {
+    const t0 = Date.now() - PERIODS[period].ms;
+    return points(name).filter(x => x.t >= t0);
+  }
+  // XP estimado num instante: entre duas leituras, cresce em linha reta.
+  function interp(pts, t) {
+    if (t <= pts[0].t) return pts[0].v;
+    for (let i = 1; i < pts.length; i++) {
+      if (pts[i].t >= t) { const a = pts[i - 1], b = pts[i]; return a.v + (b.v - a.v) * (t - a.t) / (b.t - a.t); }
+    }
+    return pts[pts.length - 1].v;
+  }
+  // Mais que isso sem leitura e com XP mudando: não dá para saber quando o XP entrou.
+  // A tolerância cresce com o período (num gráfico de 30 dias, umas horas sem leitura não mudam nada).
+  const GAP_MS = { day: 3 * 36e5, week: 24 * 36e5, month: 24 * 36e5 };
+  const isGap = (a, b, period = state.period) => b.t - a.t > GAP_MS[period] && b.v !== a.v;
+  // Intervalos do período: 24 horas cheias ou 7/30 dias de calendário (o último vai até agora).
+  function edges(period, now = Date.now()) {
+    const out = [];
+    if (period === 'day') {
+      const h = new Date(now); h.setMinutes(0, 0, 0);
+      for (let i = 23; i >= 0; i--) {
+        const s = new Date(h.getTime() - i * 36e5);
+        const e = new Date(s.getTime() + 36e5);
+        out.push({ t0: s.getTime(), t1: Math.min(now, e.getTime()), short: `${pad(s.getHours())}h`,
+          long: `${WD[s.getDay()]} ${dm(s)}, ${pad(s.getHours())}h–${pad(e.getHours())}h`, best: `às ${pad(s.getHours())}h` });
+      }
+    } else {
+      const n = PERIODS[period].n;
+      const today = new Date(now); today.setHours(0, 0, 0, 0);
+      for (let i = n - 1; i >= 0; i--) {
+        const s = new Date(today); s.setDate(today.getDate() - i);
+        const e = new Date(s); e.setDate(s.getDate() + 1);
+        const lbl = `${WD[s.getDay()]} ${dm(s)}`;
+        out.push({ t0: s.getTime(), t1: Math.min(now, e.getTime()), short: dm(s), wd: WD[s.getDay()],
+          long: i === 0 ? `${lbl} (hoje, até agora)` : lbl, best: lbl });
+      }
+    }
+    return out;
+  }
+  let bucketMemo = new Map();
+  function buckets(name, period = state.period) {
+    const key = name + '|' + period;
+    if (bucketMemo.has(key)) return bucketMemo.get(key);
+    const pts = windowPts(name, period);
+    const out = edges(period).map(b => {
+      if (!pts.length || pts[0].t > b.t1) return { ...b, gain: null, est: false };
+      const gain = Math.max(0, Math.round(interp(pts, b.t1) - interp(pts, b.t0)));
+      // Estimado só se um intervalo longo sem leitura atravessa a borda do dia/hora: aí o XP pode ser de outro.
+      // Por dia, a tolerância é de 24 h: uma noite sem leitura só divide o XP entre dois dias vizinhos.
+      let est = false;
+      const tol = GAP_MS[period];
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], z = pts[i];
+        const crosses = a.t < b.t0 || z.t > b.t1;
+        if (a.t < b.t1 && z.t > b.t0 && crosses && z.t - a.t > tol && z.v !== a.v) { est = true; break; }
+      }
+      return { ...b, gain, est: est && gain > 0 };
+    });
+    bucketMemo.set(key, out);
+    return out;
+  }
+  // Dias/horas com XP contam só o que foi medido; trechos estimados ficam de fora.
+  function activity(name, period = state.period) {
+    const b = buckets(name, period);
+    const known = b.filter(x => x.gain != null && !x.est);
+    const active = known.filter(x => x.gain > 0);
+    const best = active.slice().sort((a, c) => c.gain - a.gain)[0] || null;
+    return { b, known: known.length, active: active.length, best, est: b.some(x => x.est) };
+  }
+  function nearest(skills) {
+    let best = null;
+    for (const [k, s] of Object.entries(skills || {})) {
+      if (k === 'overall' || s.level >= 99 || s.experience < 0) continue;
+      const pr = progress(s.experience, s.level);
+      if (!best || pr.pct > best.pct) best = { k, ...pr };
+    }
+    return best;
+  }
+
   // ---------- Renderização ----------
-  function render() { renderStatus(); renderSummary(); renderCards(); renderChart(); renderSkills(); }
+  function render() {
+    bucketMemo = new Map();
+    renderStatus(); renderSummary(); renderCards(); renderChart(); renderSkills(); renderBosses(); renderAch(); renderSheet();
+    syncButtons();
+  }
+  function syncButtons() {
+    document.querySelectorAll('[data-period]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.period === state.period)));
+    document.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.mode === state.chartMode)));
+    document.querySelectorAll('[data-skmode]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.skmode === state.skillMode)));
+    document.querySelectorAll('[data-bossmode]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.bossmode === state.bossMode)));
+    $('mode-bars').textContent = state.period === 'day' ? 'Por hora' : 'Por dia';
+    $('boss-period-btn').textContent = `Em ${PERIODS[state.period].label}`;
+  }
 
   function renderStatus() {
-    const el = document.getElementById('status');
+    const el = $('status');
     if (!state.source) {
       el.classList.remove('late');
       el.textContent = state.live.busy ? `Buscando dados no Wise Old Man (${state.live.progress})…` : (state.loadError ? '' : 'Carregando…');
@@ -461,18 +809,21 @@ footer p { margin: 0; max-width: 70ch; }
   function renderSummary() {
     const vs = PLAYERS.map(p => view(p));
     const withData = vs.filter(v => v.skills);
-    const totalXp = withData.reduce((a, v) => a + v.skills.overall.experience, 0);
-    const totalLvl = withData.reduce((a, v) => a + v.skills.overall.level, 0);
     const gains = vs.filter(v => v.gained != null);
-    const groupGain = gains.reduce((a, v) => a + v.gained, 0);
-    const best = gains.slice().sort((a, b) => b.gained - a.gained)[0];
-    const label = PERIODS[state.period].label;
-    document.getElementById('summary').innerHTML = `
-      <div><span>XP total do grupo</span><strong>${withData.length ? nf.format(totalXp) : '—'}</strong></div>
-      <div><span>XP ganho em ${label}</span><strong class="${groupGain > 0 ? 'up' : ''}">${gains.length ? plus(groupGain) : '—'}</strong></div>
-      <div><span>Nível total somado</span><strong>${withData.length ? nf.format(totalLvl) : '—'}</strong></div>
-      <div><span>Destaque do período</span><strong>${best && best.gained > 0 ? esc(best.p.short) : '—'}</strong></div>`;
-    document.getElementById('banner').innerHTML = state.loadError ? `<div class="banner" role="alert">${esc(state.loadError)}</div>` : '';
+    const groupGain = sum(gains, v => v.gained);
+    const per = PERIODS[state.period];
+    const perUnit = state.period === 'day' ? groupGain / 24 : groupGain / per.n;
+    const levels = sum(gains, v => v.levelsGained);
+    const kcG = sum(vs, v => v.kcGained);
+    const has = gains.length > 0;
+    $('summary').innerHTML = `
+      <div><span>XP ganho · ${per.label}</span><strong class="${groupGain > 0 ? 'up' : ''}">${has ? plus(groupGain) : '—'}</strong></div>
+      <div><span>Média por ${per.unit}</span><strong>${has ? cf.format(Math.round(perUnit)) : '—'}</strong></div>
+      <div><span>Níveis ganhos</span><strong class="${levels > 0 ? 'up' : ''}">${has ? plus(levels) : '—'}</strong></div>
+      <div><span>Chefes abatidos</span><strong class="${kcG > 0 ? 'up' : ''}">${has ? plus(kcG) : '—'}</strong></div>
+      <div><span>XP total do grupo</span><strong>${withData.length ? cf.format(sum(withData, v => v.skills.overall.experience)) : '—'}</strong></div>
+      <div><span>Nível total somado</span><strong>${withData.length ? nf.format(sum(withData, v => v.skills.overall.level)) : '—'}</strong></div>`;
+    $('banner').innerHTML = state.loadError ? `<div class="banner" role="alert">${esc(state.loadError)}</div>` : '';
   }
 
   function ranked() {
@@ -483,11 +834,26 @@ footer p { margin: 0; max-width: 70ch; }
     });
   }
 
+  // Barrinhas de XP por intervalo. A escala é comum a todos os cartões para dar para comparar.
+  function barsHtml(b, slot, max, cls = '') {
+    return `<div class="bars ${cls}" role="img" aria-label="XP por ${PERIODS[state.period].unit}">${b.map(x => {
+      const tip = `${x.long}: ${x.gain == null ? 'sem registro' : x.gain > 0 ? (x.est ? '≈ ' : '') + plus(x.gain) + ' XP' + (x.est ? ' (estimado)' : '') : 'nenhum XP'}`;
+      const h = x.gain > 0 ? Math.max(4, x.gain / max * 100) : 0;
+      return `<i class="${x.gain == null ? 'n' : x.gain > 0 ? (x.est ? 'e' : '') : 'z'}" data-tip="${esc(tip)}" title="${esc(tip)}"><b style="height:${h.toFixed(1)}%;background:${color(slot)}"></b></i>`;
+    }).join('')}</div>`;
+  }
+  function bestText(act) {
+    if (!act.best) return act.est ? 'XP do período só estimado (poucas leituras).' : 'Nenhum XP registrado no período.';
+    return `Melhor ${PERIODS[state.period].unit}: <b>${esc(act.best.best)}</b> · <b>${esc(cplus(act.best.gain))}</b>`;
+  }
+
   function renderCards() {
     const vs = ranked();
-    const max = Math.max(1, ...vs.map(v => v.gained || 0));
-    const label = PERIODS[state.period].label;
-    document.getElementById('cards').innerHTML = vs.map((v, i) => {
+    const per = PERIODS[state.period];
+    const groupGain = sum(vs, v => Math.max(0, v.gained || 0));
+    const acts = Object.fromEntries(vs.map(v => [v.p.name, activity(v.p.name)]));
+    const barMax = Math.max(1, ...vs.flatMap(v => acts[v.p.name].b.map(x => x.gain || 0)));
+    paint($('cards'), vs.map((v, i) => {
       const { p, s, d, skills, g } = v;
       const profile = `https://wiseoldman.net/players/${enc(p.name.toLowerCase())}`;
       const head = `
@@ -498,91 +864,126 @@ footer p { margin: 0; max-width: 70ch; }
         </div>`;
       if (!d || !skills) {
         const msg = s.error ? `<p class="fresh err"><i>●</i>Sem dados: ${esc(s.error)}</p>` : `<p class="fresh"><i>●</i>${state.data ? 'Sem dados' : 'Carregando…'}</p>`;
-        return `<article class="card">${head}${msg}</article>`;
+        return `<article class="card" data-player="${esc(p.name)}">${head}${msg}</article>`;
       }
       const updated = new Date(d.updatedAt).getTime();
       const fresh = Date.now() - updated < 2 * UPDATE_EVERY_MS;
       const tops = g ? Object.values(g).filter(x => x.metric !== 'overall' && x.experience.gained > 0)
         .sort((a, b) => b.experience.gained - a.experience.gained).slice(0, 3) : [];
       const gained = v.gained;
+      const share = groupGain > 0 && gained > 0 ? Math.round(gained / groupGain * 100) : 0;
+      const avg = gained > 0 ? gained / (state.period === 'day' ? 24 : per.n) : 0;
+      const act = acts[p.name];
+      const near = nearest(skills);
+      const rg = v.rankGained;
       return `
-        <article class="card${i === 0 && gained > 0 ? ' first' : ''}">
+        <article class="card${i === 0 && gained > 0 ? ' first' : ''}" data-player="${esc(p.name)}">
           ${head}
           <div class="gain">
-            <span>XP ganho · ${label}</span>
+            <span>XP ganho · ${per.label}</span>
             <strong class="${gained > 0 ? '' : 'zero'}">${gained == null ? '—' : plus(gained)}</strong>
+            <em>${gained > 0 ? `${share}% do grupo · média de ${cf.format(Math.round(avg))}/${per.unit}` : 'Sem XP no período'}</em>
           </div>
-          <div class="bar" role="img" aria-label="${gained ? Math.round(gained / max * 100) : 0}% do maior ganho do grupo"><i style="width:${gained ? (gained / max * 100).toFixed(1) : 0}%;background:${color(p.slot)}"></i></div>
+          <div>
+            ${barsHtml(act.b, p.slot, barMax)}
+            <p class="readout" data-default="${esc(bestText(act))}">${bestText(act)}</p>
+          </div>
           <dl class="stats">
             <dt>XP total</dt><dd>${nf.format(skills.overall.experience)}</dd>
             <dt>Nível total</dt><dd>${nf.format(skills.overall.level)}${v.levelsGained > 0 ? ` <small>+${v.levelsGained}</small>` : ''}</dd>
-            <dt>Combate</dt><dd>${d.combatLevel ?? '—'}</dd>
-            <dt>EHP</dt><dd>${d.ehp != null ? ehpf.format(d.ehp) + ' h' : '—'}</dd>
-            <dt>Rank geral</dt><dd>${skills.overall.rank > 0 ? nf.format(skills.overall.rank) : '—'}</dd>
+            <dt>Rank geral</dt><dd>${skills.overall.rank > 0 ? nf.format(skills.overall.rank) : '—'}${rg < 0 ? ` <small title="Subiu ${nf.format(-rg)} posições">▲${cf.format(-rg)}</small>` : rg > 0 ? ` <small class="down" title="Caiu ${nf.format(rg)} posições">▼${cf.format(rg)}</small>` : ''}</dd>
+            <dt>Chefes abatidos</dt><dd>${nf.format(v.kc)}${v.kcGained > 0 ? ` <small>+${nf.format(v.kcGained)}</small>` : ''}</dd>
+            <dt>${state.period === 'day' ? 'Horas com XP' : 'Dias com XP'}</dt><dd>${act.known ? `${act.active} de ${act.known}` : '—'}</dd>
           </dl>
           <div class="tops">
-            <h3>Mais treinadas · ${label}</h3>
-            ${tops.length ? `<ol>${tops.map(t => `<li><span>${esc(skillName(t.metric))}${t.level.gained > 0 ? ` <small style="color:var(--good)">→ ${t.level.end}</small>` : ''}</span><span>${plus(t.experience.gained)}</span></li>`).join('')}</ol>`
+            <h3>Mais treinadas · ${per.label}</h3>
+            ${tops.length ? `<ol>${tops.map(t => `<li><span>${esc(skillName(t.metric))}${t.level.gained > 0 ? ` <small class="up-txt">→ ${t.level.end}</small>` : ''}</span><span>${plus(t.experience.gained)}</span></li>`).join('')}</ol>`
               : `<p class="empty">Nenhum XP registrado no período.</p>`}
           </div>
-          <p class="fresh ${fresh ? 'ok' : 'old'}" title="${esc(new Date(updated).toLocaleString('pt-BR'))}"><i>●</i>Hiscores lidos ${ago(updated)}</p>
+          ${near ? `<div class="near"><span>Mais perto de upar: <b>${esc(skillName(near.k))} ${near.next}</b> · ${Math.floor(near.pct * 100)}%</span><div class="prog"><i style="width:${(near.pct * 100).toFixed(1)}%;background:${color(p.slot)}"></i></div></div>` : ''}
+          <div class="card-foot">
+            <p class="fresh ${fresh ? 'ok' : 'old'}" title="${esc(new Date(updated).toLocaleString('pt-BR'))}"><i>●</i><span data-ago="${updated}" data-prefix="Lido ">Lido ${ago(updated)}</span></p>
+            <button type="button" class="btn" data-open="${esc(p.name)}" data-k="open-${esc(p.name)}">Ver ficha</button>
+          </div>
           ${s.error ? `<p class="err-msg">Mostrando dados anteriores: ${esc(s.error)}</p>` : ''}
         </article>`;
-    }).join('');
+    }).join(''));
   }
 
   // ---------- Gráfico ----------
   let chartModel = null;
-  function renderChart() {
-    const box = document.getElementById('chart-box');
-    const svg = document.getElementById('chart');
-    const tip = document.getElementById('tip');
-    tip.hidden = true;
-    document.getElementById('chart-title').textContent = `XP ganho em ${PERIODS[state.period].label}`;
-    document.getElementById('chart-legend').innerHTML = PLAYERS.map(p =>
-      `<li><span class="key" style="background:${color(p.slot)}"></span>${esc(p.short)}</li>`).join('');
+  const niceStep = raw => { const e = 10 ** Math.floor(Math.log10(raw)); const f = raw / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; };
 
-    const now = Date.now();
-    const t0 = now - PERIODS[state.period].ms;
-    const series = PLAYERS.map(p => {
-      const v = view(p);
-      const tl = v.per && v.per.timeline ? v.per.timeline : [];
-      const pts = tl.map(x => ({ t: new Date(x.date).getTime(), v: x.value })).filter(x => x.t >= t0 - 60000 && x.v > 0);
-      const base = pts.length ? pts[0].v : 0;
-      return { p, pts: pts.map(x => ({ t: x.t, y: x.v - base })) };
-    });
-    const has = series.some(s => s.pts.length);
+  function renderChart() {
+    const box = $('chart-box');
+    const svg = $('chart');
+    $('tip').hidden = true;
+    const per = PERIODS[state.period];
+    const bars = state.chartMode === 'bars';
+    $('chart-title').textContent = bars ? `XP por ${per.unit} · ${per.label}` : `XP ganho em ${per.label}`;
+    $('chart-sub').textContent = bars
+      ? `Cada barra soma o XP que o grupo registrou naquele ${per.unit}; as cores mostram a parte de cada jogador.`
+      : 'Soma acumulada desde o início do período, a cada leitura do Wise Old Man.';
+    paint($('chart-legend'), PLAYERS.map(p => {
+      const on = !state.hidden.has(p.name);
+      return `<button type="button" class="chip toggle" data-toggle="${esc(p.name)}" data-k="lg-${esc(p.name)}" aria-pressed="${on}"><span class="key" style="background:${color(p.slot)}"></span><span>${esc(p.short)}</span></button>`;
+    }).join(''));
+
     const W = Math.max(300, Math.round(box.clientWidth || 600));
     const narrow = W < 520;
-    const H = narrow ? 240 : 300;
-    const M = { t: 12, r: narrow ? 92 : 130, b: 26, l: narrow ? 46 : 58 };
-    const pw = W - M.l - M.r, ph = H - M.t - M.b;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.setAttribute('width', W); svg.setAttribute('height', H);
-
-    if (!has) {
+    chartGaps = false;
+    const ok = bars ? drawBars(svg, W, narrow) : drawLines(svg, W, narrow);
+    const note = $('chart-note');
+    note.hidden = !(ok && chartGaps);
+    note.textContent = bars
+      ? 'Barras apagadas: XP estimado, de quando o Wise Old Man ficou horas sem ler os hiscores e não dá para saber em que dia ele entrou.'
+      : 'Trechos tracejados: o Wise Old Man ficou horas sem ler os hiscores, então não dá para saber quando esse XP entrou.';
+    if (!ok) {
       svg.innerHTML = '';
       svg.setAttribute('height', 0);
       if (!box.querySelector('.chart-empty')) box.insertAdjacentHTML('beforeend', '<div class="chart-empty"></div>');
-      box.querySelector('.chart-empty').textContent = state.data ? 'Ainda não há registros neste período.' : 'Carregando o histórico…';
+      box.querySelector('.chart-empty').textContent = !state.data ? 'Carregando o histórico…' : 'Ainda não há registros neste período.';
       chartModel = null;
       return;
     }
     const empty = box.querySelector('.chart-empty'); if (empty) empty.remove();
+    bindChart();
+  }
 
-    const maxY = Math.max(1, ...series.flatMap(s => s.pts.map(x => x.y)));
-    const niceStep = raw => { const e = 10 ** Math.floor(Math.log10(raw)); const f = raw / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; };
-    const step = niceStep(maxY / 4);
-    const top = Math.max(step, Math.ceil(maxY / step) * step);
-    const x = t => M.l + (t - t0) / (now - t0) * pw;
-    const y = v => M.t + ph - v / top * ph;
-
+  function frame(svg, W, H) {
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('width', W); svg.setAttribute('height', H);
+  }
+  function yAxis(M, pw, ph, top, step, y) {
     let out = '';
     for (let v = 0; v <= top + 1e-6; v += step) {
       const yy = y(v).toFixed(1);
       out += `<line x1="${M.l}" x2="${M.l + pw}" y1="${yy}" y2="${yy}" stroke="${v === 0 ? 'var(--axis)' : 'var(--grid)'}" stroke-width="1"/>`;
       out += `<text x="${M.l - 8}" y="${yy}" text-anchor="end" dominant-baseline="middle">${v === 0 ? '0' : cf.format(v)}</text>`;
     }
+    return out;
+  }
+
+  function drawLines(svg, W, narrow) {
+    const now = Date.now();
+    const t0 = now - PERIODS[state.period].ms;
+    const series = PLAYERS.filter(p => !state.hidden.has(p.name)).map(p => {
+      const pts = windowPts(p.name);
+      const base = pts.length ? pts[0].v : 0;
+      return { p, pts: pts.map(x => ({ t: x.t, v: x.v, y: x.v - base })) };
+    });
+    if (!series.some(s => s.pts.length)) return false;
+    const H = narrow ? 240 : 300;
+    const M = { t: 12, r: narrow ? 92 : 130, b: 26, l: narrow ? 46 : 58 };
+    const pw = W - M.l - M.r, ph = H - M.t - M.b;
+    frame(svg, W, H);
+    const maxY = Math.max(1, ...series.flatMap(s => s.pts.map(x => x.y)));
+    const step = niceStep(maxY / 4);
+    const top = Math.max(step, Math.ceil(maxY / step) * step);
+    const x = t => M.l + (t - t0) / (now - t0) * pw;
+    const y = v => M.t + ph - v / top * ph;
+
+    let out = yAxis(M, pw, ph, top, step, y);
     const ticks = [];
     if (state.period === 'day') {
       const d = new Date(t0); d.setMinutes(0, 0, 0);
@@ -602,12 +1003,20 @@ footer p { margin: 0; max-width: 70ch; }
     for (const s of series) {
       if (!s.pts.length) continue;
       const c = color(s.p.slot);
-      if (s.pts.length > 1) {
-        const dpath = s.pts.map((pt, i) => `${i ? 'L' : 'M'}${x(pt.t).toFixed(1)},${y(pt.y).toFixed(1)}`).join('');
-        out += `<path d="${dpath}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-      }
+      // Trechos longos sem leitura (com XP mudando) saem tracejados: ali não dá para saber quando o XP entrou.
+      let solid = '', dashed = '';
+      const P = pt => `${x(pt.t).toFixed(1)},${y(pt.y).toFixed(1)}`;
+      s.pts.forEach((pt, i) => {
+        if (!i) { solid += `M${P(pt)}`; return; }
+        const prev = s.pts[i - 1];
+        if (isGap(prev, pt)) { dashed += `M${P(prev)}L${P(pt)}`; solid += `M${P(pt)}`; }
+        else solid += `L${P(pt)}`;
+      });
       const last = s.pts[s.pts.length - 1];
-      out += `<circle cx="${x(last.t).toFixed(1)}" cy="${y(last.y).toFixed(1)}" r="4" fill="${c}" stroke="var(--surface)" stroke-width="2"/>`;
+      solid += `L${x(now).toFixed(1)},${y(last.y).toFixed(1)}`;
+      if (dashed) out += `<path d="${dashed}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="4 4" stroke-linecap="round" opacity=".7"/>`;
+      out += `<path d="${solid}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      out += `<circle cx="${x(now).toFixed(1)}" cy="${y(last.y).toFixed(1)}" r="4" fill="${c}" stroke="var(--surface)" stroke-width="2"/>`;
     }
     const labels = series.filter(s => s.pts.length).map(s => {
       const last = s.pts[s.pts.length - 1];
@@ -626,73 +1035,134 @@ footer p { margin: 0; max-width: 70ch; }
       out += `<text class="lbl-val" x="${lx + 18}" y="${(l.y + 10).toFixed(1)}" dominant-baseline="middle">+${cf.format(l.last.y)}</text>`;
     }
     out += `<g id="cross" style="display:none"><line id="cross-line" y1="${M.t}" y2="${M.t + ph}" stroke="var(--fg-2)" stroke-width="1" stroke-dasharray="3 3"/></g>`;
-    out += `<rect class="chart-hit" id="chart-hit" x="${M.l}" y="${M.t}" width="${pw}" height="${ph}" fill="transparent" tabindex="0" aria-label="Explorar valores do gráfico com as setas"/>`;
+    out += hitRect(M, pw, ph);
     svg.innerHTML = out;
 
-    const times = [...new Set(series.flatMap(s => s.pts.map(pt => pt.t)))].sort((a, b) => a - b);
-    chartModel = { series, times, x, y, t0, now, M, pw, W, idx: times.length - 1 };
-    bindChart();
+    const times = [...new Set(series.flatMap(s => s.pts.map(pt => pt.t)).concat(now))].sort((a, b) => a - b);
+    chartModel = {
+      kind: 'line', W, M, pw, n: times.length, idx: times.length - 1,
+      xAt: i => x(times[i]),
+      pick: sx => { const t = t0 + (sx - M.l) / pw * (now - t0); let best = 0, bd = Infinity; times.forEach((tt, i) => { const dd = Math.abs(tt - t); if (dd < bd) { bd = dd; best = i; } }); return best; },
+      head: i => { const d = new Date(times[i]); return `${WD[d.getDay()]} ${dm(d)}, ${hm(d)}`; },
+      rows: i => series.filter(s => s.pts.length && times[i] >= s.pts[0].t)
+        .map(s => ({ p: s.p, v: interp(s.pts.map(q => ({ t: q.t, v: q.y })), times[i]) })).sort((a, b) => b.v - a.v),
+    };
+    chartGaps = series.some(s => s.pts.some((pt, i) => i && isGap(s.pts[i - 1], pt)));
+    return true;
   }
+  let chartGaps = false;
+  const hitRect = (M, pw, ph) => `<rect class="chart-hit" id="chart-hit" x="${M.l}" y="${M.t}" width="${pw}" height="${ph}" fill="transparent" tabindex="0" aria-label="Explorar valores do gráfico com as setas"/>`;
 
-  function valueAt(pts, t) {
-    if (!pts.length || t < pts[0].t) return null;
-    for (let i = pts.length - 1; i >= 0; i--) {
-      if (pts[i].t <= t) {
-        const a = pts[i], b = pts[i + 1];
-        if (!b) return a.y;
-        return a.y + (b.y - a.y) * (t - a.t) / (b.t - a.t);
+  function drawBars(svg, W, narrow) {
+    const vis = PLAYERS.filter(p => !state.hidden.has(p.name));
+    const per = vis.map(p => ({ p, b: buckets(p.name) }));
+    const ed = edges(state.period);
+    const n = ed.length;
+    const stacks = ed.map((e, i) => {
+      let acc = 0;
+      const segs = [];
+      for (const { p, b } of per) { const v = b[i].gain; if (v > 0) { segs.push({ p, v, y0: acc, est: b[i].est }); acc += v; } }
+      return { e, segs, total: acc };
+    });
+    chartGaps = stacks.some(s => s.segs.some(g => g.est));
+    if (!per.some(x => x.b.some(k => k.gain != null))) return false;
+    const H = narrow ? 240 : 300;
+    const M = { t: 12, r: 8, b: 26, l: narrow ? 46 : 58 };
+    const pw = W - M.l - M.r, ph = H - M.t - M.b;
+    frame(svg, W, H);
+    const maxY = Math.max(1, ...stacks.map(s => s.total));
+    const step = niceStep(maxY / 4);
+    const top = Math.max(step, Math.ceil(maxY / step) * step);
+    const y = v => M.t + ph - v / top * ph;
+    const bw = pw / n;
+    const barW = Math.min(44, Math.max(3, bw - Math.max(2, bw * 0.28)));
+    let out = `<rect id="hl" x="0" y="${M.t}" width="${bw.toFixed(1)}" height="${ph}" fill="var(--surface-2)" style="display:none"/>`;
+    out += yAxis(M, pw, ph, top, step, y);
+    const every = state.period === 'day' ? (narrow ? 6 : 3) : state.period === 'week' ? 1 : (narrow ? 7 : 3);
+    stacks.forEach((st, i) => {
+      const cx = M.l + bw * (i + 0.5);
+      const x0 = cx - barW / 2;
+      st.segs.forEach((sg, k) => {
+        const yt = y(sg.y0 + sg.v), yb = y(sg.y0) - (k > 0 ? 2 : 0);   // 2px de folga entre os pedaços
+        const h = yb - yt;
+        if (h <= 0.5) return;
+        const r = k === st.segs.length - 1 ? Math.min(4, barW / 2, h) : 0;
+        out += `<path d="M${x0.toFixed(1)},${yb.toFixed(1)}V${(yt + r).toFixed(1)}${r ? `Q${x0.toFixed(1)},${yt.toFixed(1)} ${(x0 + r).toFixed(1)},${yt.toFixed(1)}` : ''}H${(x0 + barW - r).toFixed(1)}${r ? `Q${(x0 + barW).toFixed(1)},${yt.toFixed(1)} ${(x0 + barW).toFixed(1)},${(yt + r).toFixed(1)}` : ''}V${yb.toFixed(1)}Z" fill="${color(sg.p.slot)}"${sg.est ? ' fill-opacity=".4"' : ''}/>`;
+      });
+      const fromEnd = n - 1 - i;
+      if (fromEnd % every === 0) {
+        const s = state.period === 'week' ? (narrow ? st.e.wd : `${st.e.wd} ${st.e.short.slice(0, 2)}`) : st.e.short;
+        out += `<text x="${cx.toFixed(1)}" y="${M.t + ph + 17}" text-anchor="middle">${s}</text>`;
       }
-    }
-    return null;
+    });
+    out += hitRect(M, pw, ph);
+    svg.innerHTML = out;
+    chartModel = {
+      kind: 'bars', W, M, pw, n, idx: n - 1,
+      xAt: i => M.l + bw * (i + 0.5),
+      bandX: i => M.l + bw * i,
+      pick: sx => Math.max(0, Math.min(n - 1, Math.floor((sx - M.l) / bw))),
+      head: i => ed[i].long,
+      rows: i => per.map(({ p, b }) => ({ p, v: b[i].gain, est: b[i].est })).filter(r => r.v != null).sort((a, b) => b.v - a.v),
+      total: i => stacks[i].total,
+    };
+    return true;
   }
 
   function showTip(idx) {
-    const m = chartModel; if (!m || !m.times.length) return;
-    m.idx = Math.max(0, Math.min(m.times.length - 1, idx));
-    const t = m.times[m.idx];
-    const svg = document.getElementById('chart');
-    const tip = document.getElementById('tip');
-    const xx = m.x(t);
-    svg.querySelector('#cross').style.display = '';
-    const cl = svg.querySelector('#cross-line'); cl.setAttribute('x1', xx); cl.setAttribute('x2', xx);
-    const d = new Date(t);
-    const rows = m.series.map(s => ({ s, v: valueAt(s.pts, t) })).filter(r => r.v != null).sort((a, b) => b.v - a.v);
-    tip.innerHTML = '';
-    const head = document.createElement('div'); head.className = 't-date';
-    head.textContent = `${WD[d.getDay()]} ${dm(d)}, ${hm(d)}`;
-    const ul = document.createElement('ul');
-    for (const r of rows) {
-      const li = document.createElement('li');
-      const k = document.createElement('span'); k.className = 'key'; k.style.background = color(r.s.p.slot); k.style.width = '14px';
-      const b = document.createElement('b'); b.textContent = plus(Math.round(r.v));
-      const n = document.createElement('span'); n.textContent = r.s.p.short;
-      li.append(k, b, n); ul.append(li);
+    const m = chartModel; if (!m || !m.n) return;
+    m.idx = Math.max(0, Math.min(m.n - 1, idx));
+    const svg = $('chart');
+    const tip = $('tip');
+    const xx = m.xAt(m.idx);
+    if (m.kind === 'line') {
+      svg.querySelector('#cross').style.display = '';
+      const cl = svg.querySelector('#cross-line'); cl.setAttribute('x1', xx); cl.setAttribute('x2', xx);
+    } else {
+      const hl = svg.querySelector('#hl'); hl.style.display = ''; hl.setAttribute('x', m.bandX(m.idx).toFixed(1));
     }
+    tip.innerHTML = '';
+    const head = document.createElement('div'); head.className = 't-date'; head.textContent = m.head(m.idx);
+    const ul = document.createElement('ul');
+    const row = (slot, val, label, cls) => {
+      const li = document.createElement('li'); if (cls) li.className = cls;
+      const k = document.createElement('span'); k.className = 'key';
+      if (slot) { k.style.background = color(slot); k.style.width = '14px'; }
+      const b = document.createElement('b'); b.textContent = val;
+      const n = document.createElement('span'); n.textContent = label;
+      li.append(k, b, n); ul.append(li);
+    };
+    const rows = m.rows(m.idx);
+    for (const r of rows) row(r.p.slot, (r.est ? '≈ ' : '') + plus(Math.round(r.v)), r.p.short + (r.est ? ' (estimado)' : ''));
+    if (!rows.length) row(0, '—', 'sem registro');
+    if (m.total && rows.length > 1) row(0, plus(m.total(m.idx)), 'grupo', 'sum');
     tip.append(head, ul);
     tip.hidden = false;
     const rect = svg.getBoundingClientRect();
     const px = xx * (rect.width / m.W);
     const tw = tip.offsetWidth;
-    tip.style.left = (px + 12 + tw > rect.width ? Math.max(0, px - 12 - tw) : px + 12) + 'px';
+    tip.style.left = (px + 14 + tw > rect.width ? Math.max(0, px - 14 - tw) : px + 14) + 'px';
   }
   function hideTip() {
     const c = document.querySelector('#chart #cross'); if (c) c.style.display = 'none';
-    document.getElementById('tip').hidden = true;
+    const hl = document.querySelector('#chart #hl'); if (hl) hl.style.display = 'none';
+    $('tip').hidden = true;
   }
   function bindChart() {
-    const hit = document.getElementById('chart-hit');
-    const svg = document.getElementById('chart');
+    const hit = $('chart-hit');
+    const svg = $('chart');
     if (!hit) return;
     hit.addEventListener('pointermove', e => {
       const m = chartModel; if (!m) return;
       const r = svg.getBoundingClientRect();
-      const sx = (e.clientX - r.left) * (m.W / r.width);
-      const t = m.t0 + (sx - m.M.l) / m.pw * (m.now - m.t0);
-      let best = 0, bd = Infinity;
-      m.times.forEach((tt, i) => { const dd = Math.abs(tt - t); if (dd < bd) { bd = dd; best = i; } });
-      showTip(best);
+      showTip(m.pick((e.clientX - r.left) * (m.W / r.width)));
     });
-    hit.addEventListener('pointerleave', hideTip);
+    hit.addEventListener('pointerdown', e => {
+      const m = chartModel; if (!m) return;
+      const r = svg.getBoundingClientRect();
+      showTip(m.pick((e.clientX - r.left) * (m.W / r.width)));
+    });
+    hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideTip(); });
     hit.addEventListener('focus', () => showTip(chartModel ? chartModel.idx : 0));
     hit.addEventListener('blur', hideTip);
     hit.addEventListener('keydown', e => {
@@ -707,51 +1177,344 @@ footer p { margin: 0; max-width: 70ch; }
   function renderSkills() {
     const vs = PLAYERS.map(p => view(p));
     const ref = vs.find(v => v.skills);
-    const table = document.getElementById('skills');
-    document.getElementById('skills-sub').textContent = `Nível atual e XP ganho em ${PERIODS[state.period].label}`;
+    const table = $('skills');
+    const per = PERIODS[state.period];
+    const lvl = state.skillMode === 'level';
+    $('skills-sub').textContent = lvl ? 'Nível atual e quanto falta para o próximo' : `XP ganho em ${per.label} em cada skill`;
+    $('skills-note').innerHTML = lvl
+      ? '<mark>Destaque</mark> marca quem tem mais XP na skill. Clique no nome de um jogador para ordenar pelas skills dele.'
+      : '<mark>Destaque</mark> marca quem mais ganhou XP na skill no período. Clique no nome de um jogador para ordenar pelas skills dele.';
     if (!ref) { table.innerHTML = `<tbody><tr><td style="text-align:left;color:var(--muted)">${state.data ? 'Sem dados' : 'Carregando…'}</td></tr></tbody>`; return; }
-    const keys = Object.keys(ref.skills);
-    const head = `<thead><tr><th scope="col">Skill</th>${vs.map(v => `<th scope="col"><span class="h"><span class="key" style="background:${color(v.p.slot)}"></span>${esc(v.p.short)}</span></th>`).join('')}</tr></thead>`;
-    const rows = keys.map(k => {
-      const gains = vs.map(v => (v.g && v.g[k] ? v.g[k].experience.gained : 0));
-      const top = Math.max(...gains);
-      const cells = vs.map(v => {
+    const val = (v, k) => {
+      if (!v.skills || !v.skills[k]) return -1;
+      if (lvl) return Math.max(0, v.skills[k].experience);
+      return v.g && v.g[k] ? v.g[k].experience.gained : -1;
+    };
+    let keys = Object.keys(ref.skills).filter(k => k !== 'overall');
+    const sorter = state.skillSort && vs.find(v => v.p.name === state.skillSort);
+    if (sorter) keys = keys.slice().sort((a, b) => val(sorter, b) - val(sorter, a));
+    const ariaSort = n => (state.skillSort === n ? 'descending' : 'none');
+    const head = `<thead><tr>
+      <th scope="col" aria-sort="${state.skillSort ? 'none' : 'ascending'}"><button type="button" class="sort" data-sksort="" data-k="sk-order">Skill <span class="arr">${state.skillSort ? '' : '↕'}</span></button></th>
+      ${vs.map(v => `<th scope="col" aria-sort="${ariaSort(v.p.name)}"><button type="button" class="sort" data-sksort="${esc(v.p.name)}" data-k="sk-${esc(v.p.name)}" title="Ordenar pelas skills de ${esc(v.p.short)}"><span class="key" style="background:${color(v.p.slot)}"></span>${esc(v.p.short)}<span class="arr">${state.skillSort === v.p.name ? '↓' : ''}</span></button></th>`).join('')}
+    </tr></thead>`;
+    const row = k => {
+      const vals = vs.map(v => val(v, k));
+      const top = Math.max(...vals);
+      const tie = vals.filter(x => x === top).length === vs.length;
+      const cells = vs.map((v, i) => {
         if (!v.skills || !v.skills[k]) return '<td>—</td>';
         const sk = v.skills[k];
         const gk = v.g && v.g[k];
         const gain = gk ? gk.experience.gained : null;
         const lvUp = gk ? gk.level.gained : 0;
-        const lead = top > 0 && gain === top;
-        return `<td class="${lead ? 'lead' : ''}" title="${nf.format(sk.experience)} XP">
-          <b>${nf.format(sk.level)}</b>${lvUp > 0 ? `<span class="lv">+${lvUp}</span>` : ''}
-          <span class="g ${gain > 0 ? 'pos' : ''}">${gain == null ? '—' : gain > 0 ? plus(gain) : '0'}</span></td>`;
+        const lead = top > 0 && vals[i] === top && !tie;
+        const xp = Math.max(0, sk.experience);
+        if (lvl) {
+          const pr = k === 'overall' ? null : progress(sk.experience, sk.level);
+          const title = pr ? (pr.next ? `${nf.format(xp)} XP · faltam ${nf.format(pr.toNext)} para o ${pr.next}` : `${nf.format(xp)} XP · nível máximo`) : `${nf.format(xp)} XP`;
+          return `<td class="${lead ? 'lead' : ''}" title="${esc(title)}">
+            <b>${nf.format(sk.level)}</b>${lvUp > 0 ? `<span class="lv">+${lvUp}</span>` : ''}
+            ${pr ? `<span class="mini"><i style="width:${(pr.pct * 100).toFixed(1)}%;background:${color(v.p.slot)}"></i></span>` : ''}
+            <span class="g">${cf.format(xp)} XP</span></td>`;
+        }
+        return `<td class="${lead ? 'lead' : ''}" title="${esc(`${nf.format(xp)} XP no total`)}">
+          <b class="${gain > 0 ? '' : 'dim'}">${gain == null ? '—' : gain > 0 ? plus(gain) : '0'}</b>
+          <span class="g ${lvUp > 0 ? 'pos' : ''}">nível ${nf.format(sk.level)}${lvUp > 0 ? ` (+${lvUp})` : ''}</span></td>`;
       }).join('');
-      const name = k === 'overall' ? 'Total' : skillName(k);
-      return `<tr class="${k === 'overall' ? 'total' : ''}"><th scope="row">${esc(name)}</th>${cells}</tr>`;
-    }).join('');
-    table.innerHTML = head + '<tbody>' + rows + '</tbody>';
+      return `<tr class="${k === 'overall' ? 'total' : ''}"><th scope="row">${esc(skillName(k))}</th>${cells}</tr>`;
+    };
+    paint(table, head + '<tbody>' + row('overall') + keys.map(row).join('') + '</tbody>');
+  }
+
+  // ---------- Chefes e atividades ----------
+  function renderBosses() {
+    const vs = PLAYERS.map(p => view(p));
+    const per = PERIODS[state.period];
+    const el = $('bosses');
+    const inPeriod = state.bossMode === 'period';
+    $('boss-sub').textContent = inPeriod ? `Abates e pontos ganhos em ${per.label}.` : 'Abates registrados nos hiscores (o número pequeno é o ganho no período).';
+    if (!vs.some(v => v.skills)) { el.innerHTML = `<p class="empty-note">${state.data ? 'Sem dados' : 'Carregando…'}</p>`; return; }
+    const build = (kind) => {
+      const keys = new Set();
+      for (const v of vs) for (const x of (kind === 'boss' ? v.bosses : v.acts)) keys.add(x.metric);
+      for (const v of vs) for (const x of (kind === 'boss' ? v.bossesG : v.actsG)) keys.add(x.metric);
+      return [...keys].map(k => {
+        const cells = vs.map(v => {
+          const tot = (kind === 'boss' ? v.bosses : v.acts).find(x => x.metric === k);
+          const gn = (kind === 'boss' ? v.bossesG : v.actsG).find(x => x.metric === k);
+          return { total: tot ? (kind === 'boss' ? tot.kills : tot.score) : 0, gained: gn ? (kind === 'boss' ? gn.kills.gained : gn.score.gained) : 0 };
+        });
+        return { k, cells, total: sum(cells, c => c.total), gained: sum(cells, c => c.gained) };
+      }).filter(r => inPeriod ? r.gained > 0 : r.total > 0)
+        .sort((a, b) => inPeriod ? (b.gained - a.gained || b.total - a.total) : (b.total - a.total || b.gained - a.gained));
+    };
+    const bosses = build('boss');
+    const acts = build('act');
+    if (!bosses.length && !acts.length) {
+      el.innerHTML = `<p class="empty-note">${inPeriod ? `Ninguém matou chefes nem pontuou em atividades em ${per.label}.` : 'Nenhum abate registrado ainda.'}</p>`;
+      return;
+    }
+    const LIMIT = 8;
+    const showB = state.bossAll ? bosses : bosses.slice(0, LIMIT);
+    const showA = state.bossAll ? acts : acts.slice(0, 5);
+    const hidden = bosses.length - showB.length + acts.length - showA.length;
+    const line = r => {
+      const vals = r.cells.map(c => inPeriod ? c.gained : c.total);
+      const top = Math.max(...vals);
+      const lone = vals.filter(x => x === top).length === 1;
+      return `<tr><th scope="row">${esc(metricName(r.k))}</th>${r.cells.map((c, i) => {
+        const main = inPeriod ? c.gained : c.total;
+        const lead = top > 0 && main === top && lone;
+        return `<td class="${lead ? 'lead' : ''}"><b class="${main > 0 ? '' : 'dim'}">${main > 0 ? (inPeriod ? '+' : '') + nf.format(main) : '—'}</b>${
+          inPeriod ? (c.total > 0 ? `<span class="g">total ${nf.format(c.total)}</span>` : '')
+                   : (c.gained > 0 ? `<span class="g pos">+${nf.format(c.gained)}</span>` : '')}</td>`;
+      }).join('')}</tr>`;
+    };
+    const cols = vs.length + 1;
+    paint(el, `<table><thead><tr><th scope="col">${bosses.length ? 'Chefe' : 'Atividade'}</th>${vs.map(v => `<th scope="col"><span class="h"><span class="key" style="background:${color(v.p.slot)}"></span>${esc(v.p.short)}</span></th>`).join('')}</tr></thead>
+      <tbody>${showB.map(line).join('')}
+      ${showA.length && bosses.length ? `<tr class="group"><th colspan="${cols}" scope="rowgroup">Atividades</th></tr>` : ''}
+      ${showA.map(line).join('')}</tbody></table>
+      ${hidden > 0 || state.bossAll ? `<p style="margin:12px 0 0"><button type="button" class="btn" data-bossall data-k="bossall">${state.bossAll ? 'Mostrar menos' : `Mostrar todos (+${hidden})`}</button></p>` : ''}`);
+  }
+
+  // ---------- Conquistas ----------
+  const knownDate = a => { const t = Date.parse(a.createdAt); return t > Date.UTC(2005, 0, 1) ? t : null; };
+  const measureTag = { experience: 'XP', levels: 'nível', kills: 'chefe', score: 'atividade', value: 'marco' };
+  function renderAch() {
+    const chips = [{ name: 'all', short: 'Todos' }, ...PLAYERS];
+    paint($('ach-filter'), chips.map(c => `<button type="button" class="chip" data-ach="${esc(c.name)}" data-k="ach-${esc(c.name)}" aria-pressed="${state.achFilter === c.name}">${c.slot ? `<span class="dot" style="background:${color(c.slot)}"></span>` : ''}${esc(c.short)}</button>`).join(''));
+    const list = PLAYERS.flatMap(p => (state.p[p.name].achievements || []).map(a => ({ ...a, p, t: knownDate(a) })))
+      .filter(a => a.t && (state.achFilter === 'all' || a.p.name === state.achFilter))
+      .sort((a, b) => b.t - a.t);
+    const el = $('ach');
+    if (!list.length) {
+      el.innerHTML = `<p class="empty-note">${state.data ? 'Nenhuma conquista com data registrada ainda.' : 'Carregando…'}</p>`;
+      return;
+    }
+    const LIMIT = 8;
+    const shown = state.achAll ? list : list.slice(0, LIMIT);
+    paint(el, `<ul class="feed">${shown.map(a => `<li>
+        <div><span class="f-who"><span class="dot" style="background:${color(a.p.slot)}"></span>${esc(a.p.short)}</span>
+        <span class="f-what">${esc(a.name)}${measureTag[a.measure] ? `<span class="tag">${measureTag[a.measure]}</span>` : ''}</span></div>
+        <time datetime="${esc(a.createdAt)}" title="${esc(new Date(a.t).toLocaleString('pt-BR'))}">${dm(new Date(a.t))}<br>${ago(a.t)}</time>
+      </li>`).join('')}</ul>
+      ${list.length > LIMIT ? `<p style="margin:10px 0 0"><button type="button" class="btn" data-achall data-k="achall">${state.achAll ? 'Mostrar menos' : `Ver todas (${list.length})`}</button></p>` : ''}`);
+  }
+
+  // ---------- Ficha do jogador ----------
+  const dlg = $('sheet');
+  function openSheet(name) {
+    if (!PLAYERS.some(p => p.name === name)) return;
+    state.sheet.name = name;
+    renderSheet();
+    if (!dlg.open) {
+      dlg.showModal();
+      dlg.scrollTop = 0;
+      const h = $('sheet-name'); if (h) h.focus({ preventScroll: true });   // leitor de tela anuncia o nome; sem anel de foco num botão
+    }
+    const p = PLAYERS.find(x => x.name === name);
+    history.replaceState(null, '', '#' + slug(p));
+  }
+  function moveSheet(dir) {
+    const order = ranked().map(v => v.p.name);
+    const i = order.indexOf(state.sheet.name);
+    openSheet(order[(i + dir + order.length) % order.length]);
+    dlg.scrollTop = 0;
+  }
+  function renderSheet() {
+    if (!state.sheet.name) return;
+    const p = PLAYERS.find(x => x.name === state.sheet.name);
+    const v = view(p);
+    const per = PERIODS[state.period];
+    const sh = state.sheet;
+    const profile = `https://wiseoldman.net/players/${enc(p.name.toLowerCase())}`;
+    const headHtml = `
+      <header class="sh-head">
+        <div class="sh-id"><span class="key" style="background:${color(p.slot)}"></span><div><small>Ficha do jogador</small><h2 id="sheet-name" tabindex="-1" style="outline:none">${esc(p.name)}</h2></div></div>
+        <div class="sh-nav">
+          <button type="button" class="icon-btn" data-sheetnav="-1" data-k="sh-prev" aria-label="Jogador anterior" title="Jogador anterior (←)">‹</button>
+          <button type="button" class="icon-btn" data-sheetnav="1" data-k="sh-next" aria-label="Próximo jogador" title="Próximo jogador (→)">›</button>
+          <button type="button" class="icon-btn" data-sheetclose data-k="sh-close" aria-label="Fechar ficha" title="Fechar (Esc)">✕</button>
+        </div>
+      </header>`;
+    if (!v.skills) { paint($('sheet-body'), headHtml + `<p class="empty-note">${state.data ? 'Sem dados para este jogador.' : 'Carregando…'}</p>`); return; }
+    const d = v.d;
+    const act = activity(p.name);
+    const bmax = Math.max(1, ...act.b.map(x => x.gain || 0));
+    const achs = (v.s.achievements || []).map(a => ({ ...a, t: knownDate(a) }));
+    const rg = v.rankGained;
+    const stats = `
+      <dl class="sh-stats">
+        <div><dt>XP ganho · ${per.label}</dt><dd class="${v.gained > 0 ? 'up' : ''}">${v.gained == null ? '—' : plus(v.gained)}${v.levelsGained > 0 ? `<small>+${v.levelsGained} níveis</small>` : ''}</dd></div>
+        <div><dt>XP total</dt><dd>${nf.format(v.skills.overall.experience)}</dd></div>
+        <div><dt>Nível total</dt><dd>${nf.format(v.skills.overall.level)}<small>Combate ${d.combatLevel ?? '—'}</small></dd></div>
+        <div><dt>Rank geral</dt><dd>${v.skills.overall.rank > 0 ? nf.format(v.skills.overall.rank) : '—'}${rg ? `<small>${rg < 0 ? `subiu ${nf.format(-rg)}` : `caiu ${nf.format(rg)}`} no período</small>` : ''}</dd></div>
+        <div><dt>Chefes abatidos</dt><dd>${nf.format(v.kc)}${v.kcGained > 0 ? `<small>+${nf.format(v.kcGained)} no período</small>` : ''}</dd></div>
+        <div><dt>Horas eficientes</dt><dd>${d.ehp != null ? d1.format(d.ehp) + ' h' : '—'}<small title="Efficient Hours Played / Bossed, do Wise Old Man">EHP · EHB ${d.ehb != null ? d1.format(d.ehb) + ' h' : '—'}</small></dd></div>
+        ${d.ttm != null ? `<div><dt>Até o max</dt><dd>${d.ttm > 0 ? nf.format(Math.round(d.ttm)) + ' h' : 'Max!'}<small>estimativa do WOM</small></dd></div>` : ''}
+      </dl>`;
+    const axisLbl = i => (act.b[i] ? act.b[i].short : '');
+    const daily = `
+      <section class="sh-sec">
+        <h3>XP por ${per.unit} · ${per.label}</h3>
+        <div>
+          ${barsHtml(act.b, p.slot, bmax, 'tall')}
+          <div class="bars-axis"><span>${axisLbl(0)}</span><span>${axisLbl(Math.floor(act.b.length / 2))}</span><span>${state.period === 'day' ? 'agora' : 'hoje'}</span></div>
+        </div>
+        <p class="readout" data-default="${esc(bestText(act) + (act.known ? ` · ${act.active} de ${act.known} ${state.period === 'day' ? 'horas' : 'dias'} com XP` : ''))}">${bestText(act)}${act.known ? ` · ${act.active} de ${act.known} ${state.period === 'day' ? 'horas' : 'dias'} com XP` : ''}</p>
+        ${act.est ? '<p class="est-note">Barras apagadas: XP estimado, de quando o Wise Old Man ficou horas sem ler os hiscores.</p>' : ''}
+      </section>`;
+    const tabs = [
+      { id: 'skills', label: 'Skills' },
+      { id: 'bosses', label: 'Chefes e atividades', c: v.bosses.length + v.acts.length },
+      { id: 'ach', label: 'Conquistas', c: achs.length },
+    ];
+    const tabsHtml = `<div class="tabs" role="tablist" aria-label="Seções da ficha">${tabs.map(t =>
+      `<button type="button" class="tab" role="tab" id="tab-${t.id}" aria-controls="tp-${t.id}" aria-selected="${sh.tab === t.id}" data-tab="${t.id}" data-k="tab-${t.id}">${t.label}${t.c != null ? `<span class="c">${t.c}</span>` : ''}</button>`).join('')}</div>`;
+
+    let panel = '';
+    if (sh.tab === 'skills') {
+      let keys = Object.keys(v.skills).filter(k => k !== 'overall');
+      const gainOf = k => (v.g && v.g[k] ? v.g[k].experience.gained : 0);
+      const prOf = k => progress(v.skills[k].experience, v.skills[k].level);
+      if (sh.sort === 'gained') keys.sort((a, b) => gainOf(b) - gainOf(a));
+      if (sh.sort === 'near') keys.sort((a, b) => (v.skills[a].level >= 99) - (v.skills[b].level >= 99) || prOf(b).pct - prOf(a).pct);
+      if (sh.sort === 'level') keys.sort((a, b) => v.skills[b].experience - v.skills[a].experience);
+      const sorts = [['order', 'Ordem do jogo'], ['gained', `Mais XP em ${per.label}`], ['near', 'Perto de upar'], ['level', 'Maior nível']];
+      panel = `
+        <div class="seg sm" role="group" aria-label="Ordenar skills">${sorts.map(([id, l]) => `<button type="button" data-shsort="${id}" data-k="shs-${id}" aria-pressed="${sh.sort === id}">${l}</button>`).join('')}</div>
+        <ul class="sk-grid">${keys.map(k => {
+          const sk = v.skills[k];
+          const pr = prOf(k);
+          const gain = gainOf(k);
+          const lvUp = v.g && v.g[k] ? v.g[k].level.gained : 0;
+          const xp = Math.max(0, sk.experience);
+          return `<li class="sk${gain > 0 ? ' up' : ''}${sk.level >= 99 ? ' max' : ''}" title="${esc(`${skillName(k)}: ${nf.format(xp)} XP`)}">
+            <div class="sk-top"><span class="sk-name">${esc(skillName(k))}</span><span class="sk-lv">${sk.level}${lvUp > 0 ? `<small>+${lvUp}</small>` : ''}</span></div>
+            <div class="prog"><i style="width:${(pr.pct * 100).toFixed(1)}%;background:${sk.level >= 99 ? 'var(--gold)' : color(p.slot)}"></i></div>
+            <div class="sk-foot"><span>${pr.next ? `faltam ${cf.format(pr.toNext)}` : `${cf.format(xp)} / 200 mi`}</span><span class="${gain > 0 ? 'g' : ''}">${gain > 0 ? cplus(gain) : ''}</span></div>
+          </li>`;
+        }).join('')}</ul>`;
+    } else if (sh.tab === 'bosses') {
+      const gB = Object.fromEntries(v.bossesG.map(b => [b.metric, b.kills.gained]));
+      const gA = Object.fromEntries(v.actsG.map(a => [a.metric, a.score.gained]));
+      const bl = v.bosses.slice().sort((a, b) => b.kills - a.kills);
+      const al = v.acts.slice().sort((a, b) => b.score - a.score);
+      const listHtml = (title, rows, valKey, gmap) => rows.length ? `<ul class="list">
+          <li class="head"><span>${title}</span><span>Total</span><span>${per.label}</span></li>
+          ${rows.map(r => `<li><span>${esc(metricName(r.metric))}</span><span>${nf.format(r[valKey])}</span><span>${gmap[r.metric] ? '+' + nf.format(gmap[r.metric]) : ''}</span></li>`).join('')}
+        </ul>` : `<p class="empty-note">Nenhum registro de ${title.toLowerCase()} ainda.</p>`;
+      panel = `<div class="cols"><div>${listHtml('Chefes', bl, 'kills', gB)}</div><div>${listHtml('Atividades', al, 'score', gA)}</div></div>`;
+    } else {
+      const known = achs.filter(a => a.t).sort((a, b) => b.t - a.t);
+      const old = achs.filter(a => !a.t);
+      panel = achs.length ? `<ul class="feed">${known.concat(old).map(a => `<li>
+          <span class="f-what">${esc(a.name)}${measureTag[a.measure] ? `<span class="tag">${measureTag[a.measure]}</span>` : ''}</span>
+          <time ${a.t ? `datetime="${esc(a.createdAt)}"` : ''}>${a.t ? `${dm(new Date(a.t))}/${new Date(a.t).getFullYear()}<br>${ago(a.t)}` : 'antes do registro<br>no WOM'}</time>
+        </li>`).join('')}</ul>` : '<p class="empty-note">Nenhuma conquista registrada ainda.</p>';
+    }
+    const bar = `
+      <div class="sh-bar">
+        <div class="seg sm" role="group" aria-label="Período">${Object.entries(PERIODS).map(([k, x]) => `<button type="button" data-period="${k}" data-k="shp-${k}" aria-pressed="${state.period === k}">${x.label}</button>`).join('')}</div>
+        <a class="wom" href="${profile}" target="_blank" rel="noopener">Perfil completo no Wise Old Man ↗</a>
+      </div>`;
+    paint($('sheet-body'), headHtml + bar + stats + daily + tabsHtml + `<div class="tabpanel" role="tabpanel" id="tp-${sh.tab}" aria-labelledby="tab-${sh.tab}">${panel}</div>`);
   }
 
   // ---------- Eventos ----------
-  document.getElementById('period-seg').addEventListener('click', e => {
-    const b = e.target.closest('button[data-period]'); if (!b) return;
-    state.period = b.dataset.period;
-    try { localStorage.setItem('gim-period', state.period); } catch (_) {}
-    document.querySelectorAll('#period-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  function setPeriod(k) {
+    if (!PERIODS[k] || k === state.period) return;
+    state.period = k;
+    store.set('gim-period', k);
     render();
+  }
+  document.addEventListener('click', e => {
+    const t = e.target.closest('button, a, article.card');
+    if (!t) return;
+    const ds = t.dataset;
+    if (ds.period) return setPeriod(ds.period);
+    if (ds.mode) { state.chartMode = ds.mode; store.set('gim-chart', ds.mode); syncButtons(); return renderChart(); }
+    if (ds.toggle) {
+      state.hidden.has(ds.toggle) ? state.hidden.delete(ds.toggle) : state.hidden.add(ds.toggle);
+      if (state.hidden.size >= PLAYERS.length) state.hidden.clear();   // nunca deixa o gráfico vazio
+      store.set('gim-hidden', JSON.stringify([...state.hidden]));
+      bucketMemo = new Map();
+      return renderChart();
+    }
+    if (ds.skmode) { state.skillMode = ds.skmode; store.set('gim-skmode', ds.skmode); syncButtons(); return renderSkills(); }
+    if ('sksort' in ds) { state.skillSort = ds.sksort && state.skillSort !== ds.sksort ? ds.sksort : null; return renderSkills(); }
+    if (ds.bossmode) { state.bossMode = ds.bossmode; syncButtons(); return renderBosses(); }
+    if ('bossall' in ds) { state.bossAll = !state.bossAll; return renderBosses(); }
+    if (ds.ach) { state.achFilter = ds.ach; state.achAll = false; return renderAch(); }
+    if ('achall' in ds) { state.achAll = !state.achAll; return renderAch(); }
+    if (ds.open) return openSheet(ds.open);
+    if (ds.sheetnav) return moveSheet(Number(ds.sheetnav));
+    if ('sheetclose' in ds) return dlg.close();
+    if (ds.tab) { state.sheet.tab = ds.tab; return renderSheet(); }
+    if (ds.shsort) { state.sheet.sort = ds.shsort; return renderSheet(); }
+    if (t.matches('article.card') && t.dataset.player && !e.target.closest('a')) openSheet(t.dataset.player);
   });
-  document.querySelectorAll('#period-seg button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.period === state.period)));
+  // Clique fora da ficha fecha.
+  dlg.addEventListener('click', e => {
+    if (e.target !== dlg) return;
+    const r = dlg.getBoundingClientRect();   // a barra de rolagem da ficha também é o próprio dialog
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dlg.close();
+  });
+  dlg.addEventListener('close', () => {
+    state.sheet.name = null;
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  });
+  dlg.addEventListener('keydown', e => {
+    if (e.target.closest('[role="tablist"], .seg')) {
+      if (e.target.closest('[role="tablist"]') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        const tabs = [...dlg.querySelectorAll('[role="tab"]')];
+        const i = tabs.indexOf(e.target);
+        const nx = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+        state.sheet.tab = nx.dataset.tab; renderSheet();
+        const f = dlg.querySelector(`[data-tab="${nx.dataset.tab}"]`); if (f) f.focus();
+      }
+      return;
+    }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); moveSheet(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); moveSheet(1); }
+  });
+  // Passar o dedo/mouse nas barrinhas mostra o valor daquele dia/hora logo abaixo.
+  document.addEventListener('pointerover', e => {
+    const i = e.target.closest('.bars i[data-tip]');
+    if (!i) return;
+    const ro = i.closest('.card, .sh-sec').querySelector('.readout');
+    if (ro) ro.textContent = i.dataset.tip;
+  });
+  document.addEventListener('pointerout', e => {
+    const bars = e.target.closest('.bars');
+    if (!bars || (e.relatedTarget && bars.contains(e.relatedTarget))) return;
+    const ro = bars.closest('.card, .sh-sec').querySelector('.readout');
+    if (ro && ro.dataset.default != null) ro.innerHTML = ro.dataset.default;
+  });
+  function fromHash() {
+    const h = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+    const p = PLAYERS.find(x => slug(x) === h);
+    if (p) openSheet(p.name);
+  }
+  window.addEventListener('hashchange', fromHash);
 
   let rz = 0;
-  new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(renderChart); }).observe(document.getElementById('chart-box'));
+  new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(renderChart); }).observe($('chart-box'));
 
   // Com a página aberta: confere se já saiu um data.json novo e mantém os "há X min" em dia.
   setInterval(() => { if (document.visibilityState === 'visible') loadData(); }, CHECK_EVERY_MS);
-  setInterval(() => { if (state.source) { renderStatus(); renderCards(); } }, 60000);
+  setInterval(() => {
+    if (!state.source) return;
+    renderStatus();
+    document.querySelectorAll('[data-ago]').forEach(el => { el.textContent = (el.dataset.prefix || '') + ago(Number(el.dataset.ago)); });
+  }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadData(); });
 
   render();
-  loadData();
+  loadData().then(fromHash);
 })();
 </script>
 </body>

@@ -37,19 +37,51 @@ async function api(path, method = 'GET') {
 }
 
 // Guarda só o que o site usa, para o data.json ficar leve.
+// Chefes e atividades entram só quando o jogador tem pontuação (o resto vem como -1 no WOM).
 function slimDetails(d) {
+  const data = d.latestSnapshot.data;
   const skills = {};
-  for (const [k, s] of Object.entries(d.latestSnapshot.data.skills)) {
+  for (const [k, s] of Object.entries(data.skills)) {
     skills[k] = { metric: k, experience: s.experience, level: s.level, rank: s.rank };
   }
-  return { updatedAt: d.updatedAt, combatLevel: d.combatLevel, ehp: d.ehp, latestSnapshot: { data: { skills } } };
+  const bosses = {};
+  for (const [k, b] of Object.entries(data.bosses || {})) {
+    if (b.kills > 0) bosses[k] = { metric: k, kills: b.kills, rank: b.rank };
+  }
+  const activities = {};
+  for (const [k, a] of Object.entries(data.activities || {})) {
+    if (a.score > 0) activities[k] = { metric: k, score: a.score, rank: a.rank };
+  }
+  return {
+    updatedAt: d.updatedAt, combatLevel: d.combatLevel, ehp: d.ehp, ehb: d.ehb, ttm: d.ttm,
+    latestSnapshot: { data: { skills, bosses, activities } },
+  };
 }
 function slimGained(g) {
   const skills = {};
   for (const [k, s] of Object.entries(g.data.skills)) {
-    skills[k] = { metric: k, experience: { gained: s.experience.gained }, level: { gained: s.level.gained, end: s.level.end } };
+    skills[k] = {
+      metric: k,
+      experience: { gained: s.experience.gained },
+      level: { gained: s.level.gained, end: s.level.end },
+      // Sem rank no início ou no fim (-1), a diferença não quer dizer nada.
+      rank: { gained: s.rank.start > 0 && s.rank.end > 0 ? s.rank.gained : 0 },
+    };
   }
-  return { startsAt: g.startsAt, endsAt: g.endsAt, data: { skills } };
+  const bosses = {};
+  for (const [k, b] of Object.entries(g.data.bosses || {})) {
+    if (b.kills.gained > 0) bosses[k] = { metric: k, kills: { gained: b.kills.gained, end: b.kills.end } };
+  }
+  const activities = {};
+  for (const [k, a] of Object.entries(g.data.activities || {})) {
+    if (a.score.gained > 0) activities[k] = { metric: k, score: { gained: a.score.gained, end: a.score.end } };
+  }
+  const ehb = g.data.computed && g.data.computed.ehb ? { value: { gained: g.data.computed.ehb.value.gained } } : null;
+  return { startsAt: g.startsAt, endsAt: g.endsAt, data: { skills, bosses, activities, computed: { ehb } } };
+}
+// Trechos parados (o mesmo XP em vários registros seguidos) ficam só com a primeira e a última leitura.
+function compactTimeline(points) {
+  return points.filter((p, i, a) => i === 0 || i === a.length - 1 || p.value !== a[i - 1].value || p.value !== a[i + 1].value);
 }
 
 async function collect(name) {
@@ -74,11 +106,20 @@ async function collect(name) {
     periods[p] = { gained: slimGained(await api(`${path}/gained?period=${p}`)) };
   }
   // A linha do tempo de 30 dias cobre também 24 horas e 7 dias; o site recorta.
-  const timeline = (await api(`${path}/snapshots/timeline?metric=overall&period=month`))
+  const timeline = compactTimeline((await api(`${path}/snapshots/timeline?metric=overall&period=month`))
     .map(x => ({ value: x.value, date: x.date }))
-    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date)));
 
-  return { name, details: slimDetails(details), periods, timeline, updateError };
+  // Conquistas (99s, marcos de XP e de abates). Se falhar, o resto do jogador ainda vale.
+  let achievements = [];
+  try {
+    achievements = (await api(`${path}/achievements`))
+      .map(a => ({ name: a.name, metric: a.metric, measure: a.measure, threshold: a.threshold, createdAt: a.createdAt }))
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+      .slice(0, 40);
+  } catch (e) { console.log(`Sem conquistas de ${name}: ${e.message}`); }
+
+  return { name, details: slimDetails(details), periods, timeline, achievements, updateError };
 }
 
 // Dados publicados na última hora: usados se algum jogador falhar agora.
