@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XP do Grupo GIM</title>
+<meta name="description" content="Acompanha o XP dos membros do grupo GIM de Old School RuneScape, atualizado a cada hora pelo Wise Old Man.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<style>
+/* Layout: livro-caixa do salão do grupo — faixa de cabeçalho com os totais, uma linha de filtro de período,
+   cartões dos jogadores em ordem de XP ganho, gráfico de XP acumulado e, por fim, a tabela de skills. */
+:root {
+  color-scheme: dark;
+  --bg: #171511;
+  --surface: #211e19;
+  --surface-2: #2a2620;
+  --line: #38332b;
+  --line-soft: #2d2923;
+  --fg: #efe7d7;
+  --fg-2: #bdb19b;
+  --muted: #8c8272;
+  --gold: #e3b24f;
+  --gold-ink: #1d1606;
+  --good: #3cc23c;
+  --warn: #fab219;
+  --bad: #e66767;
+  --grid: #2e2a24;
+  --axis: #4a443a;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --f-display: "Pixelify Sans", "Courier New", monospace;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #efebe3; --surface: #fcfbf8; --surface-2: #f4f1ea; --line: #dbd4c6; --line-soft: #e7e2d7;
+    --fg: #1c1914; --fg-2: #574f43; --muted: #7d7464;
+    --gold: #8f6200; --gold-ink: #fffaf0; --good: #006300; --warn: #8a5a00; --bad: #b52c2c;
+    --grid: #ebe6dc; --axis: #c9c1b1;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #efebe3; --surface: #fcfbf8; --surface-2: #f4f1ea; --line: #dbd4c6; --line-soft: #e7e2d7;
+  --fg: #1c1914; --fg-2: #574f43; --muted: #7d7464;
+  --gold: #8f6200; --gold-ink: #fffaf0; --good: #006300; --warn: #8a5a00; --bad: #b52c2c;
+  --grid: #ebe6dc; --axis: #c9c1b1;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.5 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+a { color: inherit; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+/* Cabeçalho */
+.top { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between; }
+.brand { display: grid; gap: 4px; min-width: 0; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+h1 { margin: 0; font: 700 clamp(34px, 6vw, 52px)/1 var(--f-display); letter-spacing: .01em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--gold); }
+.status { display: grid; gap: 8px; justify-items: end; }
+.status-line { font-size: 13px; color: var(--fg-2); text-align: right; }
+.status-line b { color: var(--fg); font-weight: 700; }
+.btn {
+  font: 700 13px/1 var(--f-body); color: var(--fg); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: var(--r); padding: 9px 14px; cursor: pointer;
+  display: inline-flex; gap: 8px; align-items: center;
+}
+.btn:hover { border-color: var(--muted); }
+.btn[disabled] { opacity: .55; cursor: progress; }
+.spin { width: 10px; height: 10px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; display: none; }
+.btn[disabled] .spin { display: inline-block; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Resumo do grupo */
+.summary { display: flex; flex-wrap: wrap; gap: 12px 40px; padding-block: 18px; border-block: 1px solid var(--line); }
+.summary div { display: grid; gap: 2px; min-width: 0; }
+.summary span { font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+.summary strong { font: 600 22px/1.2 var(--f-mono); font-variant-numeric: tabular-nums; }
+.summary strong.up { color: var(--good); }
+
+/* Filtro de período */
+.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); padding: 3px; background: var(--surface); }
+.seg button {
+  font: 700 13px/1 var(--f-body); color: var(--fg-2); background: transparent; border: 0; border-radius: 4px;
+  padding: 9px 14px; cursor: pointer;
+}
+.seg button:hover { color: var(--fg); background: var(--surface-2); }
+.seg button[aria-pressed="true"] { background: var(--gold); color: var(--gold-ink); }
+.filters .hint { font-size: 13px; color: var(--muted); }
+
+.banner { border: 1px solid var(--bad); color: var(--fg); background: var(--surface); border-radius: var(--r); padding: 12px 14px; font-size: 14px; }
+
+/* Cartões dos jogadores */
+.cards { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 600px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 16px; display: grid; gap: 14px; align-content: start; min-width: 0;
+  transition: opacity .2s;
+}
+.loading .card, .loading .panel { opacity: .6; }
+.card-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
+.rank { font: 700 26px/1 var(--f-display); color: var(--muted); min-width: 1.6em; }
+.card.first .rank { color: var(--gold); }
+.who { min-width: 0; display: grid; gap: 2px; }
+.who small { font-size: 11px; letter-spacing: .14em; color: var(--muted); font-weight: 700; }
+.who h2 { margin: 0; font: 700 21px/1.15 var(--f-body); display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+.key { display: inline-block; width: 16px; height: 3px; border-radius: 2px; flex: none; }
+.wom { font-size: 12px; color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.wom:hover { color: var(--fg); border-color: var(--fg-2); }
+.gain { display: grid; gap: 2px; }
+.gain span { font-size: 12px; color: var(--muted); }
+.gain strong { font: 600 26px/1.15 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--good); overflow-wrap: anywhere; }
+.gain strong.zero { color: var(--fg-2); }
+.bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; min-width: 2px; }
+.stats { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; }
+.stats dt { color: var(--muted); }
+.stats dd { margin: 0; text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--fg); }
+.stats dd small { color: var(--good); font-size: 12px; }
+.tops { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.tops h3 { margin: 0; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.tops ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.tops li { display: flex; justify-content: space-between; gap: 8px; }
+.tops li span:last-child { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--fg-2); }
+.tops .empty { color: var(--muted); font-size: 13px; }
+.fresh { margin: 0; font-size: 12px; color: var(--fg-2); display: flex; gap: 6px; align-items: baseline; }
+.fresh i { font-style: normal; }
+.fresh.ok i { color: var(--good); }
+.fresh.old i { color: var(--warn); }
+.fresh.err i { color: var(--bad); }
+.card .err-msg { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* Painéis */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; transition: opacity .2s; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; align-items: baseline; }
+.panel h2 { margin: 0; font: 700 20px/1.2 var(--f-display); text-wrap: balance; }
+.panel .sub { margin: 0; font-size: 13px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--fg-2); list-style: none; margin: 0; padding: 0; }
+.legend li { display: inline-flex; gap: 8px; align-items: center; }
+
+.chart-box { position: relative; min-width: 0; }
+.chart-box svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-box svg text { font-family: var(--f-mono); font-size: 11px; fill: var(--muted); }
+.chart-box svg .lbl-name { fill: var(--fg); font-family: var(--f-body); font-weight: 700; font-size: 12px; }
+.chart-box svg .lbl-val { fill: var(--fg-2); }
+.chart-hit { cursor: crosshair; outline: none; }
+.chart-empty { padding: 48px 0; text-align: center; color: var(--muted); font-size: 14px; }
+.tip {
+  position: absolute; top: 4px; pointer-events: none; z-index: 2;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 10px 12px; font-size: 12px; min-width: 180px; box-shadow: 0 6px 20px rgb(0 0 0 / .25);
+}
+.tip[hidden] { display: none; }
+.tip .t-date { color: var(--muted); margin-bottom: 6px; }
+.tip ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.tip li { display: grid; grid-template-columns: 14px auto 1fr; gap: 8px; align-items: center; }
+.tip li b { font: 600 13px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--fg); }
+.tip li span:last-child { color: var(--fg-2); text-align: right; }
+
+/* Tabela de skills */
+.table-scroll { overflow-x: auto; margin-inline: -18px; padding-inline: 18px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+thead th { font-weight: 700; color: var(--fg-2); font-size: 12px; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+thead th .h { display: inline-flex; gap: 8px; align-items: center; }
+tbody th { text-align: left; font-weight: 700; color: var(--fg); position: sticky; left: 0; background: var(--surface); }
+thead th:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+td b { font: 600 14px var(--f-mono); font-variant-numeric: tabular-nums; }
+td .lv { color: var(--good); font: 500 11px var(--f-mono); margin-left: 4px; }
+td .g { display: block; font: 400 12px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+td .g.pos { color: var(--fg-2); }
+td.lead { background: color-mix(in srgb, var(--gold) 12%, transparent); }
+td.lead .g { color: var(--gold); font-weight: 600; }
+tr.total th, tr.total td { border-bottom: 1px solid var(--line); background-clip: padding-box; }
+tr.total td b { font-size: 15px; }
+.table-note { margin: 0; font-size: 12px; color: var(--muted); }
+.table-note mark { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold); padding: 1px 5px; border-radius: 3px; font-weight: 700; }
+
+footer { font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+footer p { margin: 0; max-width: 70ch; }
+
+@media (max-width: 560px) {
+  body { padding-block: 20px 40px; }
+  .status { justify-items: start; }
+  .status-line { text-align: left; }
+  .summary strong { font-size: 19px; }
+  .panel { padding: 14px; }
+  .table-scroll { margin-inline: -14px; padding-inline: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">Old School RuneScape · Group Ironman</span>
+      <h1>XP do Grupo <em>GIM</em></h1>
+    </div>
+    <div class="status">
+      <div class="status-line" id="status-line" aria-live="polite">Carregando dados do Wise Old Man…</div>
+      <button class="btn" id="refresh-btn" type="button"><span class="spin" aria-hidden="true"></span><span id="refresh-label">Atualizar agora</span></button>
+    </div>
+  </header>
+
+  <section class="summary" id="summary" aria-label="Resumo do grupo"></section>
+
+  <div class="filters">
+    <div class="seg" role="group" aria-label="Período" id="period-seg">
+      <button type="button" id="p-day" data-period="day" aria-pressed="false">24 horas</button>
+      <button type="button" id="p-week" data-period="week" aria-pressed="true">7 dias</button>
+      <button type="button" id="p-month" data-period="month" aria-pressed="false">30 dias</button>
+    </div>
+    <span class="hint" id="period-hint">Ranking pelo XP ganho no período</span>
+  </div>
+
+  <div id="banner"></div>
+
+  <section class="cards" id="cards" aria-label="Jogadores"></section>
+
+  <section class="panel" aria-labelledby="chart-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="chart-title">XP ganho no período</h2>
+        <p class="sub">Soma acumulada desde o início do período, a cada registro do Wise Old Man.</p>
+      </div>
+      <ul class="legend" id="chart-legend"></ul>
+    </div>
+    <div class="chart-box" id="chart-box">
+      <svg id="chart" role="img" aria-label="Gráfico de XP ganho por jogador"></svg>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="skills-title">
+    <div class="panel-head">
+      <h2 id="skills-title">Skills</h2>
+      <p class="sub" id="skills-sub">Nível atual e XP ganho no período</p>
+    </div>
+    <div class="table-scroll">
+      <table id="skills"></table>
+    </div>
+    <p class="table-note"><mark>Destaque</mark> marca quem mais ganhou XP naquela skill no período.</p>
+  </section>
+
+  <footer>
+    <p>Dados do <a href="https://wiseoldman.net" target="_blank" rel="noopener">Wise Old Man</a>, que lê os hiscores oficiais do OSRS. Com esta página aberta, ela pede uma atualização de cada jogador a cada hora e recarrega os números sozinha.</p>
+    <p>O histórico fica guardado no Wise Old Man, então os ganhos de 24 horas, 7 dias e 30 dias continuam valendo mesmo se você fechar a página.</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Configuração ----------
+  const PLAYERS = [
+    { name: 'GIM Serasa',   short: 'Serasa',   slot: 1 },
+    { name: 'GIM Skol',     short: 'Skol',     slot: 2 },
+    { name: 'GIM Zezinho',  short: 'Zezinho',  slot: 3 },
+    { name: 'GIM Elite Br', short: 'Elite Br', slot: 4 },
+  ];
+  const API = 'https://api.wiseoldman.net/v2';
+  const REFRESH_MS = 60 * 60 * 1000;     // atualiza a cada 1 hora
+  const STALE_MS = 50 * 60 * 1000;       // pede update ao WOM se o dado tiver mais de 50 min
+  const RETRY_MS = 5 * 60 * 1000;        // em caso de falha geral, tenta de novo em 5 min
+  const PERIODS = {
+    day:   { label: '24 horas', ms: 864e5 },
+    week:  { label: '7 dias',   ms: 7 * 864e5 },
+    month: { label: '30 dias',  ms: 30 * 864e5 },
+  };
+  const SKILL_NAMES = { runecrafting: 'Runecraft' };
+
+  // ---------- Estado ----------
+  const state = {
+    period: 'week',
+    busy: false,
+    progress: '',
+    lastRefresh: 0,
+    nextRefresh: 0,
+    fatal: null,
+    p: Object.fromEntries(PLAYERS.map(p => [p.name, { details: null, periods: {}, error: null, updateError: null }])),
+  };
+  try { const saved = localStorage.getItem('gim-period'); if (PERIODS[saved]) state.period = saved; } catch (_) {}
+
+  // Cache local: recarregar a página dentro da mesma hora não refaz todos os pedidos ao Wise Old Man.
+  const CACHE_KEY = 'gim-cache-v1';
+  function saveCache() {
+    try {
+      const p = {};
+      for (const [name, s] of Object.entries(state.p)) p[name] = { details: s.details, periods: s.periods, updateError: s.updateError };
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ lastRefresh: state.lastRefresh, nextRefresh: state.nextRefresh, p }));
+    } catch (_) {}
+  }
+  function loadCache() {
+    try {
+      const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (!c || !c.p) return false;
+      for (const p of PLAYERS) {
+        const cs = c.p[p.name]; if (!cs || !cs.details) continue;
+        Object.assign(state.p[p.name], { details: cs.details, periods: cs.periods || {}, updateError: cs.updateError || null });
+      }
+      state.lastRefresh = c.lastRefresh || 0;
+      state.nextRefresh = c.nextRefresh || 0;
+      return true;
+    } catch (_) { return false; }
+  }
+
+  // ---------- Formatação ----------
+  const nf = new Intl.NumberFormat('pt-BR');
+  const cf = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
+  const ehpf = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  const WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const pad = n => String(n).padStart(2, '0');
+  const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const dm = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const plus = n => (n > 0 ? '+' : '') + nf.format(n);
+  const color = slot => `var(--s${slot})`;
+  function ago(ts) {
+    const s = Math.max(0, (Date.now() - ts) / 1000);
+    if (s < 90) return 'agora há pouco';
+    const m = Math.round(s / 60);
+    if (m < 60) return `há ${m} min`;
+    const h = Math.round(m / 60);
+    if (h < 48) return `há ${h} h`;
+    return `há ${Math.round(h / 24)} dias`;
+  }
+  const skillName = k => SKILL_NAMES[k] || k[0].toUpperCase() + k.slice(1);
+
+  // ---------- API do Wise Old Man (limite: 20 req/min sem chave) ----------
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const sent = [];
+  async function throttle() {
+    for (;;) {
+      const now = Date.now();
+      while (sent.length && now - sent[0] > 61000) sent.shift();
+      if (sent.length < 17) { sent.push(now); return; }
+      await sleep(61000 - (now - sent[0]) + 100);
+    }
+  }
+  async function api(path, method = 'GET', tries = 0) {
+    await throttle();
+    let res;
+    try {
+      res = await fetch(API + path, { method, headers: { Accept: 'application/json' } });
+    } catch (e) {
+      const err = new Error('Sem conexão com o Wise Old Man'); err.network = true; throw err;
+    }
+    if (res.status === 429 && tries < 4) {
+      const wait = 30 * (tries + 1);
+      const before = state.progress;
+      state.progress = `O Wise Old Man pediu uma pausa. Tentando de novo em ${wait} s…`;
+      renderStatus();
+      await sleep(wait * 1000);
+      state.progress = before; renderStatus();
+      return api(path, method, tries + 1);
+    }
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      const err = new Error((body && body.message) || `Erro ${res.status}`);
+      err.status = res.status; throw err;
+    }
+    return body;
+  }
+  const enc = n => encodeURIComponent(n);
+
+  async function refreshAll({ manual = false } = {}) {
+    if (state.busy) return;
+    state.busy = true; state.fatal = null;
+    let ok = 0;
+    for (const [i, p] of PLAYERS.entries()) {
+      const s = state.p[p.name];
+      state.progress = `Atualizando ${p.name} (${i + 1}/${PLAYERS.length})…`;
+      renderStatus();
+      try {
+        const path = `/players/${enc(p.name)}`;
+        let d = null;
+        // Consulta primeiro: se o PC do grupo ou outro visitante já atualizou na última hora,
+        // não pede uma nova leitura dos hiscores.
+        let age = Infinity;
+        try { d = await api(path); age = Date.now() - new Date(d.updatedAt).getTime(); }
+        catch (e) { if (e.status !== 404) throw e; }
+        if (age > STALE_MS || (manual && age > 65000)) {
+          try { d = await api(path, 'POST'); s.updateError = null; }
+          catch (e) { s.updateError = e.message; d = null; }
+        }
+        if (!d) d = await api(path);
+        s.details = d; s.error = null; s.periods = {};
+        ok++;
+      } catch (e) {
+        s.error = e.message;
+        if (s.details) ok++;
+      }
+      renderCards();
+    }
+    state.progress = 'Carregando ganhos do período…';
+    renderStatus();
+    await loadPeriod(state.period);
+    state.busy = false; state.progress = '';
+    state.lastRefresh = Date.now();
+    if (!ok) {
+      state.fatal = 'Não consegui falar com o Wise Old Man. Vou tentar de novo em 5 minutos.';
+      state.nextRefresh = Date.now() + RETRY_MS;
+    } else {
+      state.nextRefresh = state.lastRefresh + REFRESH_MS;
+    }
+    saveCache();
+    render();
+  }
+
+  // ganhos por skill + linha do tempo do XP total, um jogador por vez
+  async function loadPeriod(period) {
+    for (const p of PLAYERS) {
+      const s = state.p[p.name];
+      if (!s.details || (s.periods[period] && !s.periods[period].error)) continue;
+      try {
+        const gained = await api(`/players/${enc(p.name)}/gained?period=${period}`);
+        const timeline = await api(`/players/${enc(p.name)}/snapshots/timeline?metric=overall&period=${period}`);
+        s.periods[period] = { gained, timeline: (timeline || []).slice().sort((a, b) => new Date(a.date) - new Date(b.date)) };
+      } catch (e) {
+        s.periods[period] = { error: e.message };
+      }
+    }
+    saveCache();
+  }
+
+  // ---------- Leitura dos dados ----------
+  function view(p, period = state.period) {
+    const s = state.p[p.name];
+    const d = s.details;
+    const per = s.periods[period];
+    const skills = d && d.latestSnapshot && d.latestSnapshot.data ? d.latestSnapshot.data.skills : null;
+    const g = per && per.gained && per.gained.data ? per.gained.data.skills : null;
+    return {
+      p, s, d, skills, g, per,
+      gained: g ? g.overall.experience.gained : null,
+      levelsGained: g ? g.overall.level.gained : 0,
+    };
+  }
+
+  // ---------- Renderização ----------
+  function render() { renderStatus(); renderSummary(); renderCards(); renderChart(); renderSkills(); }
+
+  function renderStatus() {
+    const line = document.getElementById('status-line');
+    const btn = document.getElementById('refresh-btn');
+    btn.disabled = state.busy;
+    document.getElementById('refresh-label').textContent = state.busy ? 'Atualizando…' : 'Atualizar agora';
+    document.getElementById('app').classList.toggle('loading', state.busy);
+    if (state.busy) { line.textContent = state.progress; return; }
+    if (!state.lastRefresh) { line.textContent = 'Carregando dados do Wise Old Man…'; return; }
+    const left = Math.max(0, state.nextRefresh - Date.now());
+    const mm = Math.floor(left / 60000), ss = Math.floor((left % 60000) / 1000);
+    line.innerHTML = `Atualizado às <b>${hm(new Date(state.lastRefresh))}</b> · próxima atualização em <b class="num">${pad(mm)}:${pad(ss)}</b>`;
+  }
+
+  function renderSummary() {
+    const vs = PLAYERS.map(p => view(p));
+    const withData = vs.filter(v => v.skills);
+    const totalXp = withData.reduce((a, v) => a + v.skills.overall.experience, 0);
+    const totalLvl = withData.reduce((a, v) => a + v.skills.overall.level, 0);
+    const gains = vs.filter(v => v.gained != null);
+    const groupGain = gains.reduce((a, v) => a + v.gained, 0);
+    const best = gains.slice().sort((a, b) => b.gained - a.gained)[0];
+    const label = PERIODS[state.period].label;
+    document.getElementById('summary').innerHTML = `
+      <div><span>XP total do grupo</span><strong>${withData.length ? nf.format(totalXp) : '—'}</strong></div>
+      <div><span>XP ganho em ${label}</span><strong class="${groupGain > 0 ? 'up' : ''}">${gains.length ? plus(groupGain) : '—'}</strong></div>
+      <div><span>Nível total somado</span><strong>${withData.length ? nf.format(totalLvl) : '—'}</strong></div>
+      <div><span>Destaque do período</span><strong>${best && best.gained > 0 ? esc(best.p.short) : '—'}</strong></div>`;
+    const b = document.getElementById('banner');
+    b.innerHTML = state.fatal ? `<div class="banner" role="alert">${esc(state.fatal)}</div>` : '';
+  }
+
+  function ranked() {
+    return PLAYERS.map(p => view(p)).sort((a, b) => {
+      const ga = a.gained == null ? -1 : a.gained, gb = b.gained == null ? -1 : b.gained;
+      if (gb !== ga) return gb - ga;
+      return (b.skills ? b.skills.overall.experience : -1) - (a.skills ? a.skills.overall.experience : -1);
+    });
+  }
+
+  function renderCards() {
+    const vs = ranked();
+    const max = Math.max(1, ...vs.map(v => v.gained || 0));
+    const label = PERIODS[state.period].label;
+    document.getElementById('cards').innerHTML = vs.map((v, i) => {
+      const { p, s, d, skills, g } = v;
+      const profile = `https://wiseoldman.net/players/${enc(p.name.toLowerCase())}`;
+      const head = `
+        <div class="card-top">
+          <span class="rank">${v.gained != null ? (i + 1) + 'º' : '–'}</span>
+          <div class="who"><small>GIM</small><h2><span class="key" style="background:${color(p.slot)}"></span>${esc(p.short)}</h2></div>
+          <a class="wom" href="${profile}" target="_blank" rel="noopener">Perfil ↗</a>
+        </div>`;
+      if (!d) {
+        const msg = s.error ? `<p class="fresh err"><i>●</i>Erro: ${esc(s.error)}</p>` : `<p class="fresh"><i>●</i>Carregando…</p>`;
+        return `<article class="card">${head}${msg}</article>`;
+      }
+      const updated = new Date(d.updatedAt).getTime();
+      const fresh = Date.now() - updated < 70 * 60000;
+      const tops = g ? Object.values(g).filter(x => x.metric !== 'overall' && x.experience.gained > 0)
+        .sort((a, b) => b.experience.gained - a.experience.gained).slice(0, 3) : [];
+      const gained = v.gained;
+      return `
+        <article class="card${i === 0 && gained > 0 ? ' first' : ''}">
+          ${head}
+          <div class="gain">
+            <span>XP ganho · ${label}</span>
+            <strong class="${gained > 0 ? '' : 'zero'}">${gained == null ? '…' : plus(gained)}</strong>
+          </div>
+          <div class="bar" role="img" aria-label="${gained ? Math.round(gained / max * 100) : 0}% do maior ganho do grupo"><i style="width:${gained ? (gained / max * 100).toFixed(1) : 0}%;background:${color(p.slot)}"></i></div>
+          <dl class="stats">
+            <dt>XP total</dt><dd>${nf.format(skills.overall.experience)}</dd>
+            <dt>Nível total</dt><dd>${nf.format(skills.overall.level)}${v.levelsGained > 0 ? ` <small>+${v.levelsGained}</small>` : ''}</dd>
+            <dt>Combate</dt><dd>${d.combatLevel ?? '—'}</dd>
+            <dt>EHP</dt><dd>${d.ehp != null ? ehpf.format(d.ehp) + ' h' : '—'}</dd>
+            <dt>Rank geral</dt><dd>${skills.overall.rank > 0 ? nf.format(skills.overall.rank) : '—'}</dd>
+          </dl>
+          <div class="tops">
+            <h3>Mais treinadas · ${label}</h3>
+            ${tops.length ? `<ol>${tops.map(t => `<li><span>${esc(skillName(t.metric))}${t.level.gained > 0 ? ` <small style="color:var(--good)">→ ${t.level.end}</small>` : ''}</span><span>${plus(t.experience.gained)}</span></li>`).join('')}</ol>`
+              : `<p class="empty">${g ? 'Nenhum XP registrado no período.' : 'Carregando…'}</p>`}
+          </div>
+          <p class="fresh ${fresh ? 'ok' : 'old'}" title="${esc(new Date(updated).toLocaleString('pt-BR'))}"><i>●</i>${fresh ? 'Atualizado' : 'Última atualização'} ${ago(updated)}</p>
+          ${s.updateError && !fresh ? `<p class="err-msg">O Wise Old Man não conseguiu atualizar: ${esc(s.updateError)}</p>` : ''}
+        </article>`;
+    }).join('');
+  }
+
+  // ---------- Gráfico ----------
+  let chartModel = null;
+  function renderChart() {
+    const box = document.getElementById('chart-box');
+    const svg = document.getElementById('chart');
+    const tip = document.getElementById('tip');
+    tip.hidden = true;
+    document.getElementById('chart-title').textContent = `XP ganho em ${PERIODS[state.period].label}`;
+    document.getElementById('chart-legend').innerHTML = PLAYERS.map(p =>
+      `<li><span class="key" style="background:${color(p.slot)}"></span>${esc(p.short)}</li>`).join('');
+
+    const now = Date.now();
+    const t0 = now - PERIODS[state.period].ms;
+    const series = PLAYERS.map(p => {
+      const v = view(p);
+      const tl = v.per && v.per.timeline ? v.per.timeline : [];
+      const pts = tl.map(x => ({ t: new Date(x.date).getTime(), v: x.value })).filter(x => x.t >= t0 - 60000 && x.v > 0);
+      const base = pts.length ? pts[0].v : 0;
+      return { p, pts: pts.map(x => ({ t: x.t, y: x.v - base })) };
+    });
+    const has = series.some(s => s.pts.length);
+    const W = Math.max(300, Math.round(box.clientWidth || 600));
+    const narrow = W < 520;
+    const H = narrow ? 240 : 300;
+    const M = { t: 12, r: narrow ? 92 : 130, b: 26, l: narrow ? 46 : 58 };
+    const pw = W - M.l - M.r, ph = H - M.t - M.b;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('width', W); svg.setAttribute('height', H);
+
+    if (!has) {
+      svg.innerHTML = '';
+      svg.setAttribute('height', 0);
+      if (!box.querySelector('.chart-empty')) box.insertAdjacentHTML('beforeend', '<div class="chart-empty"></div>');
+      box.querySelector('.chart-empty').textContent = state.busy || !state.lastRefresh ? 'Carregando o histórico…' : 'Ainda não há registros neste período.';
+      chartModel = null;
+      return;
+    }
+    const empty = box.querySelector('.chart-empty'); if (empty) empty.remove();
+
+    const maxY = Math.max(1, ...series.flatMap(s => s.pts.map(x => x.y)));
+    const niceStep = raw => { const e = 10 ** Math.floor(Math.log10(raw)); const f = raw / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; };
+    const step = niceStep(maxY / 4);
+    const top = Math.max(step, Math.ceil(maxY / step) * step);
+    const x = t => M.l + (t - t0) / (now - t0) * pw;
+    const y = v => M.t + ph - v / top * ph;
+
+    let out = '';
+    // grade horizontal + eixo Y
+    for (let v = 0; v <= top + 1e-6; v += step) {
+      const yy = y(v).toFixed(1);
+      out += `<line x1="${M.l}" x2="${M.l + pw}" y1="${yy}" y2="${yy}" stroke="${v === 0 ? 'var(--axis)' : 'var(--grid)'}" stroke-width="1"/>`;
+      out += `<text x="${M.l - 8}" y="${yy}" text-anchor="end" dominant-baseline="middle">${v === 0 ? '0' : cf.format(v)}</text>`;
+    }
+    // eixo X
+    const ticks = [];
+    if (state.period === 'day') {
+      const d = new Date(t0); d.setMinutes(0, 0, 0);
+      d.setHours(Math.ceil(d.getHours() / 4) * 4);
+      for (; d.getTime() <= now; d.setHours(d.getHours() + 4)) if (d.getTime() >= t0) ticks.push({ t: d.getTime(), s: `${pad(d.getHours())}h` });
+    } else {
+      const every = state.period === 'week' ? (narrow ? 2 : 1) : 5;
+      const d = new Date(t0); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 1);
+      for (; d.getTime() <= now; d.setDate(d.getDate() + every))
+        ticks.push({ t: d.getTime(), s: state.period === 'week' ? `${WD[d.getDay()]} ${pad(d.getDate())}` : dm(d) });
+    }
+    for (const tk of ticks) {
+      const xx = x(tk.t).toFixed(1);
+      out += `<line x1="${xx}" x2="${xx}" y1="${M.t + ph}" y2="${M.t + ph + 4}" stroke="var(--axis)"/>`;
+      out += `<text x="${xx}" y="${M.t + ph + 17}" text-anchor="middle">${tk.s}</text>`;
+    }
+    // linhas
+    for (const s of series) {
+      if (!s.pts.length) continue;
+      const c = color(s.p.slot);
+      if (s.pts.length > 1) {
+        const dpath = s.pts.map((pt, i) => `${i ? 'L' : 'M'}${x(pt.t).toFixed(1)},${y(pt.y).toFixed(1)}`).join('');
+        out += `<path d="${dpath}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      }
+      const last = s.pts[s.pts.length - 1];
+      out += `<circle cx="${x(last.t).toFixed(1)}" cy="${y(last.y).toFixed(1)}" r="4" fill="${c}" stroke="var(--surface)" stroke-width="2"/>`;
+    }
+    // rótulos diretos à direita, sem sobreposição
+    const labels = series.filter(s => s.pts.length).map(s => {
+      const last = s.pts[s.pts.length - 1];
+      return { s, last, y: y(last.y) };
+    }).sort((a, b) => a.y - b.y);
+    const gap = 28;
+    for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < gap) labels[i].y = labels[i - 1].y + gap;
+    const overflow = labels.length ? labels[labels.length - 1].y - (M.t + ph) : 0;
+    if (overflow > 0) labels.forEach(l => { l.y -= overflow; });
+    for (let i = labels.length - 2; i >= 0; i--) if (labels[i + 1].y - labels[i].y < gap) labels[i].y = labels[i + 1].y - gap;
+    const lx = M.l + pw + 12;
+    for (const l of labels) {
+      const c = color(l.s.p.slot);
+      out += `<line x1="${lx}" x2="${lx + 12}" y1="${(l.y - 4).toFixed(1)}" y2="${(l.y - 4).toFixed(1)}" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`;
+      out += `<text class="lbl-name" x="${lx + 18}" y="${(l.y - 4).toFixed(1)}" dominant-baseline="middle">${esc(l.s.p.short)}</text>`;
+      out += `<text class="lbl-val" x="${lx + 18}" y="${(l.y + 10).toFixed(1)}" dominant-baseline="middle">+${cf.format(l.last.y)}</text>`;
+    }
+    // camada de hover
+    out += `<g id="cross" style="display:none"><line id="cross-line" y1="${M.t}" y2="${M.t + ph}" stroke="var(--fg-2)" stroke-width="1" stroke-dasharray="3 3"/></g>`;
+    out += `<rect class="chart-hit" id="chart-hit" x="${M.l}" y="${M.t}" width="${pw}" height="${ph}" fill="transparent" tabindex="0" aria-label="Explorar valores do gráfico com as setas"/>`;
+    svg.innerHTML = out;
+
+    const times = [...new Set(series.flatMap(s => s.pts.map(pt => pt.t)))].sort((a, b) => a - b);
+    chartModel = { series, times, x, y, t0, now, M, pw, W, idx: times.length - 1 };
+    bindChart();
+  }
+
+  function valueAt(pts, t) {
+    if (!pts.length || t < pts[0].t) return null;
+    for (let i = pts.length - 1; i >= 0; i--) {
+      if (pts[i].t <= t) {
+        const a = pts[i], b = pts[i + 1];
+        if (!b) return a.y;
+        return a.y + (b.y - a.y) * (t - a.t) / (b.t - a.t);
+      }
+    }
+    return null;
+  }
+
+  function showTip(idx) {
+    const m = chartModel; if (!m || !m.times.length) return;
+    m.idx = Math.max(0, Math.min(m.times.length - 1, idx));
+    const t = m.times[m.idx];
+    const svg = document.getElementById('chart');
+    const tip = document.getElementById('tip');
+    const xx = m.x(t);
+    svg.querySelector('#cross').style.display = '';
+    const cl = svg.querySelector('#cross-line'); cl.setAttribute('x1', xx); cl.setAttribute('x2', xx);
+    const d = new Date(t);
+    const rows = m.series.map(s => ({ s, v: valueAt(s.pts, t) })).filter(r => r.v != null).sort((a, b) => b.v - a.v);
+    tip.innerHTML = '';
+    const head = document.createElement('div'); head.className = 't-date';
+    head.textContent = `${WD[d.getDay()]} ${dm(d)}, ${hm(d)}`;
+    const ul = document.createElement('ul');
+    for (const r of rows) {
+      const li = document.createElement('li');
+      const k = document.createElement('span'); k.className = 'key'; k.style.background = color(r.s.p.slot); k.style.width = '14px';
+      const b = document.createElement('b'); b.textContent = plus(Math.round(r.v));
+      const n = document.createElement('span'); n.textContent = r.s.p.short;
+      li.append(k, b, n); ul.append(li);
+    }
+    tip.append(head, ul);
+    tip.hidden = false;
+    const scale = svg.getBoundingClientRect().width / m.W;
+    const px = xx * scale;
+    const boxW = svg.getBoundingClientRect().width;
+    const tw = tip.offsetWidth;
+    tip.style.left = (px + 12 + tw > boxW ? Math.max(0, px - 12 - tw) : px + 12) + 'px';
+  }
+  function hideTip() {
+    const svg = document.getElementById('chart');
+    const c = svg.querySelector('#cross'); if (c) c.style.display = 'none';
+    document.getElementById('tip').hidden = true;
+  }
+  function bindChart() {
+    const hit = document.getElementById('chart-hit');
+    const svg = document.getElementById('chart');
+    if (!hit) return;
+    hit.addEventListener('pointermove', e => {
+      const m = chartModel; if (!m) return;
+      const r = svg.getBoundingClientRect();
+      const sx = (e.clientX - r.left) * (m.W / r.width);
+      const t = m.t0 + (sx - m.M.l) / m.pw * (m.now - m.t0);
+      let best = 0, bd = Infinity;
+      m.times.forEach((tt, i) => { const dd = Math.abs(tt - t); if (dd < bd) { bd = dd; best = i; } });
+      showTip(best);
+    });
+    hit.addEventListener('pointerleave', hideTip);
+    hit.addEventListener('focus', () => showTip(chartModel ? chartModel.idx : 0));
+    hit.addEventListener('blur', hideTip);
+    hit.addEventListener('keydown', e => {
+      if (!chartModel) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); showTip(chartModel.idx - 1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); showTip(chartModel.idx + 1); }
+      if (e.key === 'Escape') hideTip();
+    });
+  }
+
+  // ---------- Tabela de skills ----------
+  function renderSkills() {
+    const vs = PLAYERS.map(p => view(p));
+    const ref = vs.find(v => v.skills);
+    const table = document.getElementById('skills');
+    document.getElementById('skills-sub').textContent = `Nível atual e XP ganho em ${PERIODS[state.period].label}`;
+    if (!ref) { table.innerHTML = '<tbody><tr><td style="text-align:left;color:var(--muted)">Carregando…</td></tr></tbody>'; return; }
+    const keys = Object.keys(ref.skills);
+    const head = `<thead><tr><th scope="col">Skill</th>${vs.map(v => `<th scope="col"><span class="h"><span class="key" style="background:${color(v.p.slot)}"></span>${esc(v.p.short)}</span></th>`).join('')}</tr></thead>`;
+    const rows = keys.map(k => {
+      const gains = vs.map(v => (v.g && v.g[k] ? v.g[k].experience.gained : 0));
+      const top = Math.max(...gains);
+      const cells = vs.map((v, i) => {
+        if (!v.skills || !v.skills[k]) return '<td>—</td>';
+        const sk = v.skills[k];
+        const gk = v.g && v.g[k];
+        const gain = gk ? gk.experience.gained : null;
+        const lvUp = gk ? gk.level.gained : 0;
+        const lead = top > 0 && gain === top;
+        return `<td class="${lead ? 'lead' : ''}" title="${nf.format(sk.experience)} XP">
+          <b>${nf.format(sk.level)}</b>${lvUp > 0 ? `<span class="lv">+${lvUp}</span>` : ''}
+          <span class="g ${gain > 0 ? 'pos' : ''}">${gain == null ? '…' : gain > 0 ? plus(gain) : '0'}</span></td>`;
+      }).join('');
+      const name = k === 'overall' ? 'Total' : skillName(k);
+      return `<tr class="${k === 'overall' ? 'total' : ''}"><th scope="row">${esc(name)}</th>${cells}</tr>`;
+    }).join('');
+    table.innerHTML = head + '<tbody>' + rows + '</tbody>';
+  }
+
+  // ---------- Eventos ----------
+  document.getElementById('period-seg').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-period]'); if (!b) return;
+    const period = b.dataset.period;
+    if (period === state.period) return;
+    state.period = period;
+    try { localStorage.setItem('gim-period', period); } catch (_) {}
+    document.querySelectorAll('#period-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    render();
+    const needs = PLAYERS.some(p => state.p[p.name].details && !state.p[p.name].periods[period]);
+    if (needs && !state.busy) {
+      state.busy = true; state.progress = 'Carregando ganhos do período…'; renderStatus();
+      await loadPeriod(period);
+      state.busy = false; state.progress = '';
+      render();
+    }
+  });
+  document.querySelectorAll('#period-seg button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.period === state.period)));
+  document.getElementById('refresh-btn').addEventListener('click', () => refreshAll({ manual: true }));
+
+  let rz = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(renderChart); }).observe(document.getElementById('chart-box'));
+
+  // relógio: contagem regressiva e disparo da atualização de hora em hora
+  setInterval(() => {
+    if (!state.busy && state.nextRefresh && Date.now() >= state.nextRefresh) refreshAll();
+    else renderStatus();
+  }, 1000);
+  // a cada minuto, reescreve os "há X min" dos cartões
+  setInterval(() => { if (!state.busy) renderCards(); }, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !state.busy && state.nextRefresh && Date.now() >= state.nextRefresh) refreshAll();
+  });
+
+  // início: usa o cache se ainda estiver dentro da hora; senão, atualiza tudo
+  (async () => {
+    const cached = loadCache();
+    render();
+    if (cached && state.nextRefresh > Date.now()) {
+      const missing = PLAYERS.some(p => { const s = state.p[p.name]; return s.details && (!s.periods[state.period] || s.periods[state.period].error); });
+      if (missing) {
+        state.busy = true; state.progress = 'Carregando ganhos do período…'; renderStatus();
+        await loadPeriod(state.period);
+        state.busy = false; state.progress = '';
+        render();
+      }
+    } else {
+      refreshAll();
+    }
+  })();
+})();
+</script>
+</body>
+</html>
