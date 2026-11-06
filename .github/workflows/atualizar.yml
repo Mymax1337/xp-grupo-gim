@@ -1,9 +1,11 @@
 name: Atualizar XP do grupo
 
 # De hora em hora: busca os dados no Wise Old Man, grava data.json e publica o site.
+# O agendamento do GitHub atrasa e descarta execuções com frequência, então ele tenta
+# a cada 15 minutos e só publica quando os dados no ar já têm 55 minutos ou mais.
 on:
   schedule:
-    - cron: '7 * * * *'   # todo hora, aos 7 minutos
+    - cron: '3,18,33,48 * * * *'
   workflow_dispatch:       # botão "Run workflow" na aba Actions
   push:
     branches: [main]
@@ -21,25 +23,42 @@ jobs:
   coletar:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      publicar: ${{ steps.idade.outputs.publicar }}
     steps:
+      - name: Ver a idade dos dados publicados
+        id: idade
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "publicar=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          gen=$(curl -fsS "https://mymax1337.github.io/xp-grupo-gim/data.json?t=$(date +%s)" | jq -r '.generatedAt // empty' || true)
+          if [ -z "$gen" ]; then echo "publicar=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          idade=$(( $(date +%s) - $(date -d "$gen" +%s) ))
+          echo "Dados no ar têm $(( idade / 60 )) min"
+          if [ "$idade" -ge $(( 55 * 60 )) ]; then echo "publicar=true" >> "$GITHUB_OUTPUT"; else echo "publicar=false" >> "$GITHUB_OUTPUT"; fi
+
       - uses: actions/checkout@v5
+        if: steps.idade.outputs.publicar == 'true'
 
       - uses: actions/setup-node@v5
+        if: steps.idade.outputs.publicar == 'true'
         with:
           node-version: 24
 
       - name: Buscar dados no Wise Old Man
+        if: steps.idade.outputs.publicar == 'true'
         run: |
           mkdir -p _site
           cp index.html _site/
           node scripts/coletar.mjs _site/data.json
 
       - uses: actions/upload-pages-artifact@v4
+        if: steps.idade.outputs.publicar == 'true'
         with:
           path: _site
 
       # O GitHub desliga agendamentos de repositórios públicos sem commits há 60 dias.
       - name: Manter o agendamento ativo
+        if: steps.idade.outputs.publicar == 'true'
         run: |
           last=$(git log -1 --format=%ct)
           if [ $(( $(date +%s) - last )) -gt $(( 45 * 86400 )) ]; then
@@ -51,6 +70,7 @@ jobs:
 
   publicar:
     needs: coletar
+    if: needs.coletar.outputs.publicar == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

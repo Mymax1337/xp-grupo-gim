@@ -276,6 +276,7 @@ footer p { margin: 0; max-width: 70ch; }
   ];
   const UPDATE_EVERY_MS = 60 * 60 * 1000;  // o GitHub gera um data.json novo a cada hora
   const CHECK_EVERY_MS = 5 * 60 * 1000;    // com a página aberta, confere a cada 5 min se já saiu
+  const STALE_VIEW_MS = 75 * 60 * 1000;    // se os dados prontos passarem disso, busca direto no Wise Old Man
   const PERIODS = {
     day:   { label: '24 horas', ms: 864e5 },
     week:  { label: '7 dias',   ms: 7 * 864e5 },
@@ -288,6 +289,8 @@ footer p { margin: 0; max-width: 70ch; }
     period: 'week',
     data: null,
     loadError: null,
+    source: null,                         // { kind: 'auto' (data.json) | 'live' (direto do WOM), at }
+    live: { busy: false, progress: '' },
     p: Object.fromEntries(PLAYERS.map(p => [p.name, { details: null, periods: {}, error: null, updateError: null }])),
   };
   try { const saved = localStorage.getItem('gim-period'); if (PERIODS[saved]) state.period = saved; } catch (_) {}
@@ -315,7 +318,19 @@ footer p { margin: 0; max-width: 70ch; }
   }
   const skillName = k => SKILL_NAMES[k] || k[0].toUpperCase() + k.slice(1);
 
-  // ---------- Dados prontos (data.json, gerado de hora em hora) ----------
+  // ---------- Dados prontos (data.json, gerado de hora em hora pelo GitHub) ----------
+  function applyPlayer(name, src) {
+    const periods = {};
+    for (const k of Object.keys(PERIODS)) {
+      if (src.periods && src.periods[k]) periods[k] = { gained: src.periods[k].gained, timeline: src.timeline || [] };
+    }
+    state.p[name] = { details: src.details || null, periods, error: src.error || null, updateError: src.updateError || null };
+  }
+  function applyAll(players, source) {
+    for (const p of PLAYERS) applyPlayer(p.name, players.find(x => x.name === p.name) || {});
+    state.source = source;
+  }
+
   let loading = null;
   function loadData() {
     if (!loading) loading = fetchData().finally(() => { loading = null; });
@@ -329,21 +344,81 @@ footer p { margin: 0; max-width: 70ch; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       state.loadError = null;
-      if (!state.data || data.generatedAt !== state.data.generatedAt) {
-        state.data = data;
-        for (const p of PLAYERS) {
-          const src = (data.players || []).find(x => x.name === p.name) || {};
-          const periods = {};
-          for (const k of Object.keys(PERIODS)) {
-            if (src.periods && src.periods[k]) periods[k] = { gained: src.periods[k].gained, timeline: src.timeline || [] };
-          }
-          state.p[p.name] = { details: src.details || null, periods, error: src.error || null, updateError: src.updateError || null };
-        }
-      }
+      state.data = data;
+      const at = Date.parse(data.generatedAt);
+      if (!state.source || at > state.source.at) applyAll(data.players || [], { kind: 'auto', at });
     } catch (e) {
-      state.loadError = state.data
+      state.loadError = state.source
         ? 'Não consegui buscar dados mais novos. Mostrando os últimos que carreguei.'
-        : 'Não consegui carregar os dados. Recarregue a página em alguns minutos.';
+        : null;
+    }
+    // Se a atualização automática atrasar, mostra o que já tem e busca números novos sem travar a página.
+    if (!state.source || Date.now() - state.source.at > STALE_VIEW_MS) {
+      const saved = readLive();
+      if (saved && saved.players && (!state.source || saved.at > state.source.at)) applyAll(saved.players, { kind: 'live', at: saved.at });
+      if (!state.source || Date.now() - state.source.at > STALE_VIEW_MS) refreshFromWom();
+    }
+    render();
+  }
+
+  // ---------- Plano B: direto do Wise Old Man, só quando os dados prontos estão atrasados ----------
+  const API = 'https://api.wiseoldman.net/v2';
+  const LIVE_KEY = 'gim-live-v1';
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let lastReq = 0;
+  async function wom(path, method = 'GET') {
+    for (let attempt = 0; ; attempt++) {
+      const wait = lastReq + 3100 - Date.now();   // ~19 pedidos por minuto; o limite é 20
+      if (wait > 0) await sleep(wait);
+      lastReq = Date.now();
+      const res = await fetch(API + path, { method, headers: { Accept: 'application/json' } });
+      if (res.status === 429 && attempt < 3) { await sleep(30000 * (attempt + 1)); continue; }
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error((body && body.message) || `Erro ${res.status}`);
+      return body;
+    }
+  }
+  function readLive() {
+    try { return JSON.parse(localStorage.getItem(LIVE_KEY) || 'null'); } catch (_) { return null; }
+  }
+  function snapshotOf(name) {
+    const s = state.p[name];
+    const periods = {};
+    for (const [k, v] of Object.entries(s.periods)) periods[k] = { gained: v.gained };
+    const any = Object.values(s.periods)[0];
+    return { name, details: s.details, periods, timeline: any ? any.timeline : [] };
+  }
+  async function refreshFromWom() {
+    if (state.live.busy) return;
+    state.live.busy = true;
+    let ok = 0;
+    for (const [i, p] of PLAYERS.entries()) {
+      state.live.progress = `${i + 1}/${PLAYERS.length}`;
+      renderStatus();
+      const path = `/players/${enc(p.name)}`;
+      try {
+        let details = await wom(path);
+        if (Date.now() - Date.parse(details.updatedAt) > 60 * 60 * 1000) {
+          try { details = await wom(path, 'POST'); } catch (_) { /* usa o último registro */ }
+        }
+        const periods = {};
+        for (const k of Object.keys(PERIODS)) periods[k] = { gained: await wom(`${path}/gained?period=${k}`) };
+        const timeline = (await wom(`${path}/snapshots/timeline?metric=overall&period=month`))
+          .map(x => ({ value: x.value, date: x.date }))
+          .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+        applyPlayer(p.name, { details, periods, timeline });
+        ok++;
+        render();
+      } catch (_) { /* mantém o que já estava na tela para esse jogador */ }
+    }
+    state.live.busy = false;
+    if (ok) {
+      state.source = { kind: 'live', at: Date.now() };
+      try {
+        localStorage.setItem(LIVE_KEY, JSON.stringify({ at: state.source.at, players: PLAYERS.map(p => snapshotOf(p.name)) }));
+      } catch (_) {}
+    } else if (!state.source) {
+      state.loadError = 'Não consegui carregar os dados. Recarregue a página em alguns minutos.';
     }
     render();
   }
@@ -367,14 +442,20 @@ footer p { margin: 0; max-width: 70ch; }
 
   function renderStatus() {
     const el = document.getElementById('status');
-    if (!state.data) { el.textContent = state.loadError ? '' : 'Carregando…'; return; }
-    const gen = new Date(state.data.generatedAt);
-    const late = Date.now() - gen.getTime() > 2 * UPDATE_EVERY_MS;
-    el.classList.toggle('late', late);
-    const next = new Date(gen.getTime() + UPDATE_EVERY_MS);
-    el.innerHTML = `<span>Dados de <b>${hm(gen)}</b> (${ago(gen.getTime())})</span>` +
-      (late ? '<span class="next">A atualização automática está atrasada.</span>'
-            : `<span class="next">Próxima atualização por volta das ${hm(next)}</span>`);
+    if (!state.source) {
+      el.classList.remove('late');
+      el.textContent = state.live.busy ? `Buscando dados no Wise Old Man (${state.live.progress})…` : (state.loadError ? '' : 'Carregando…');
+      return;
+    }
+    const at = new Date(state.source.at);
+    const late = Date.now() - at.getTime() > STALE_VIEW_MS;
+    el.classList.toggle('late', late && !state.live.busy);
+    let second;
+    if (state.live.busy) second = `Buscando números mais novos no Wise Old Man (${state.live.progress})…`;
+    else if (late) second = 'A atualização automática está atrasada.';
+    else if (state.source.kind === 'live') second = 'Buscados direto no Wise Old Man';
+    else second = `Próxima atualização por volta das ${hm(new Date(at.getTime() + UPDATE_EVERY_MS))}`;
+    el.innerHTML = `<span>Dados de <b>${hm(at)}</b> (${ago(at.getTime())})</span><span class="next">${esc(second)}</span>`;
   }
 
   function renderSummary() {
@@ -666,7 +747,7 @@ footer p { margin: 0; max-width: 70ch; }
 
   // Com a página aberta: confere se já saiu um data.json novo e mantém os "há X min" em dia.
   setInterval(() => { if (document.visibilityState === 'visible') loadData(); }, CHECK_EVERY_MS);
-  setInterval(() => { if (state.data) { renderStatus(); renderCards(); } }, 60000);
+  setInterval(() => { if (state.source) { renderStatus(); renderCards(); } }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadData(); });
 
   render();
