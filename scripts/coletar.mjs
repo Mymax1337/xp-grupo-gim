@@ -76,8 +76,9 @@ function slimGained(g) {
   for (const [k, a] of Object.entries(g.data.activities || {})) {
     if (a.score.gained > 0) activities[k] = { metric: k, score: { gained: a.score.gained, end: a.score.end } };
   }
-  const ehb = g.data.computed && g.data.computed.ehb ? { value: { gained: g.data.computed.ehb.value.gained } } : null;
-  return { startsAt: g.startsAt, endsAt: g.endsAt, data: { skills, bosses, activities, computed: { ehb } } };
+  // Horas eficientes ganhas no período: EHP (skills) e EHB (chefes), as medidas de eficiência do WOM.
+  const hours = k => (g.data.computed && g.data.computed[k] ? { value: { gained: g.data.computed[k].value.gained } } : null);
+  return { startsAt: g.startsAt, endsAt: g.endsAt, data: { skills, bosses, activities, computed: { ehp: hours('ehp'), ehb: hours('ehb') } } };
 }
 // Trechos parados (o mesmo XP em vários registros seguidos) ficam só com a primeira e a última leitura.
 function compactTimeline(points) {

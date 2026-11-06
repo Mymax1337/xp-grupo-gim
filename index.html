@@ -101,6 +101,30 @@ h1 em { font-style: normal; color: var(--gold); }
 .status .next { color: var(--muted); }
 .status.late b { color: var(--warn); }
 
+/* Destaques: três prêmios, cada um com o vencedor de 24 horas, 7 dias e 30 dias */
+.awards { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 860px) { .awards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.award { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); padding: 14px 14px 6px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.aw-head { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.aw-head h3 { margin: 0; font: 700 16px/1.2 var(--f-body); }
+.aw-head div > span { font-size: 12px; color: var(--muted); }
+.aw-badge { width: 40px; height: 40px; border-radius: var(--r); display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); flex: none; }
+.aw-down { color: var(--bad); font: 700 18px/1 var(--f-body); }
+.aw-rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.aw-rows li { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 14px; margin-inline: -14px; border-top: 1px solid var(--line-soft); min-height: 52px; }
+.aw-rows li.cur { background: color-mix(in srgb, var(--gold) 9%, transparent); }
+.aw-per { all: unset; cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 700; }
+.aw-per:hover { color: var(--fg); }
+.aw-per:focus-visible, .aw-name:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+li.cur .aw-per { color: var(--gold); }
+.aw-who { display: flex; flex-wrap: wrap; gap: 2px 12px; min-width: 0; }
+.aw-name { all: unset; cursor: pointer; font-weight: 700; font-size: 15px; display: inline-flex; gap: 7px; align-items: center; }
+.aw-name:hover span:last-child { text-decoration: underline; text-underline-offset: 3px; }
+.aw-val { text-align: right; font: 600 14px/1.3 var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.aw-val small { display: block; font: 400 11px var(--f-mono); color: var(--muted); white-space: normal; }
+.aw-name { white-space: nowrap; }
+.aw-none { font-size: 13px; color: var(--muted); grid-column: 2 / -1; }
+
 /* Resumo do grupo */
 .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 28px; padding-block: 18px; border-block: 1px solid var(--line); }
 .summary div { display: grid; gap: 2px; min-width: 0; }
@@ -363,6 +387,17 @@ footer p { margin: 0; max-width: 72ch; }
     </div>
     <div class="status" id="status" aria-live="polite">Carregando…</div>
   </header>
+
+  <section class="panel" aria-labelledby="aw-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="aw-title">Destaques</h2>
+        <p class="sub">Quem mandou melhor e quem ficou para trás em cada período. Toque num nome para abrir a ficha.</p>
+      </div>
+    </div>
+    <div class="awards" id="awards"></div>
+    <p class="table-note">EHB e EHP são as horas eficientes do Wise Old Man: quanto tempo um jogador eficiente levaria para conseguir os mesmos abates (EHB) ou o mesmo XP (EHP). Wintertodt, Tempoross e Zalcano contam como skill, não como PvM.</p>
+  </section>
 
   <section class="summary" id="summary" aria-label="Resumo do grupo"></section>
 
@@ -662,6 +697,8 @@ footer p { margin: 0; max-width: 72ch; }
   // ---------- Leitura dos dados ----------
   // Ratings de PvP começam num valor fixo para todo mundo (2.500 e 500), então não contam como atividade.
   const RATINGS = new Set(['pvp_arena', 'last_man_standing']);
+  // "Chefes" de skill (minigames de skilling) não contam como PvM.
+  const SKILLING_BOSSES = new Set(['wintertodt', 'tempoross', 'zalcano']);
   // Serve tanto para o data.json enxuto quanto para as respostas completas do WOM (plano B).
   const rankGain = o => {
     if (!o || !o.rank) return 0;
@@ -689,6 +726,8 @@ footer p { margin: 0; max-width: 72ch; }
       kc: sum(bosses, b => b.kills),
       kcGained: sum(bossesG, b => b.kills.gained),
       ehbGained: gd && gd.computed && gd.computed.ehb ? gd.computed.ehb.value.gained : null,
+      ehpGained: gd && gd.computed && gd.computed.ehp ? gd.computed.ehp.value.gained : null,
+      pvmKills: sum(bossesG.filter(b => !SKILLING_BOSSES.has(b.metric)), b => b.kills.gained),
     };
   }
 
@@ -787,7 +826,7 @@ footer p { margin: 0; max-width: 72ch; }
   // ---------- Renderização ----------
   function render() {
     bucketMemo = new Map();
-    renderStatus(); renderSummary(); renderCards(); renderChart(); renderSkills(); renderBosses(); renderAch(); renderSheet();
+    renderStatus(); renderAwards(); renderSummary(); renderCards(); renderChart(); renderSkills(); renderBosses(); renderAch(); renderSheet();
     syncButtons();
   }
   function syncButtons() {
@@ -815,6 +854,58 @@ footer p { margin: 0; max-width: 72ch; }
     else if (state.source.kind === 'live') second = 'Buscados direto no Wise Old Man';
     else second = `Próxima atualização por volta das ${hm(new Date(at.getTime() + UPDATE_EVERY_MS))}`;
     el.innerHTML = `<span>Dados de <b>${hm(at)}</b> (${ago(at.getTime())})</span><span class="next">${esc(second)}</span>`;
+  }
+
+  // ---------- Destaques ----------
+  const hrs = h => (h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : `${d1.format(h)} h`);
+  const kills = n => `${nf.format(n)} ${n === 1 ? 'abate' : 'abates'}`;
+  const AWARDS = [
+    {
+      id: 'pvm', title: 'Melhor no PvM', sub: 'Mais horas eficientes de chefe (EHB)', badge: icon('ehb', 'm'),
+      key: v => [v.ehbGained || 0, v.pvmKills], dir: -1, none: 'Ninguém fez PvM',
+      val: v => (v.ehbGained > 1e-6 ? `${hrs(v.ehbGained)} EHB<small>${v.pvmKills ? kills(v.pvmKills) : ''}</small>` : kills(v.pvmKills)),
+    },
+    {
+      id: 'eff', title: 'Mais eficiente', sub: 'Mais horas eficientes de skill (EHP)', badge: icon('ehp', 'm'),
+      key: v => [v.ehpGained || 0], dir: -1, none: 'Ninguém ganhou horas eficientes',
+      val: v => `${hrs(v.ehpGained)} EHP<small>${cplus(v.gained)} XP</small>`,
+    },
+    {
+      id: 'worst', title: 'Lanterninha', sub: 'Menos XP ganho no período', badge: '<span class="aw-down" aria-hidden="true">▼</span>',
+      key: v => [v.gained], dir: 1, none: 'Ninguém ganhou XP',
+      val: (v, ctx) => `${plus(v.gained)} XP<small>${ctx.lead > v.gained ? `${cf.format(ctx.lead - v.gained)} atrás do 1º` : ''}</small>`,
+    },
+  ];
+  const cmpKeys = (a, b) => { for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; if (Math.abs(d) > 1e-6) return d; } return 0; };
+  function pickAward(aw, period) {
+    const vs = PLAYERS.map(p => view(p, period)).filter(v => v.gained != null);
+    if (!vs.length) return { none: 'Sem dados' };
+    const sorted = vs.slice().sort((a, b) => aw.dir * cmpKeys(aw.key(a), aw.key(b)));
+    const top = sorted[0];
+    const winners = sorted.filter(v => cmpKeys(aw.key(v), aw.key(top)) === 0);
+    const lead = Math.max(...vs.map(v => v.gained));
+    if (aw.id === 'worst') {
+      if (winners.length === vs.length) return { none: lead > 0 ? `Empate: todos com ${plus(lead)} XP` : aw.none };
+    } else if (aw.key(top).every(x => x <= 1e-6)) {
+      return { none: aw.none };
+    }
+    return { winners, ctx: { lead } };
+  }
+  function renderAwards() {
+    const el = $('awards');
+    if (!state.source) { el.innerHTML = `<p class="empty-note">${state.loadError ? 'Sem dados' : 'Carregando…'}</p>`; return; }
+    paint(el, AWARDS.map(aw => `
+      <article class="award">
+        <header class="aw-head"><span class="aw-badge">${aw.badge}</span><div><h3>${aw.title}</h3><span>${aw.sub}</span></div></header>
+        <ol class="aw-rows">${Object.entries(PERIODS).map(([k, per]) => {
+          const r = pickAward(aw, k);
+          const cur = k === state.period ? 'cur' : '';
+          const head = `<button type="button" class="aw-per" data-period="${k}" data-k="awp-${aw.id}-${k}" title="Mostrar o site em ${per.label}">${per.label}</button>`;
+          if (r.none) return `<li class="${cur}">${head}<span class="aw-none">${esc(r.none)}</span></li>`;
+          const who = r.winners.map(v => `<button type="button" class="aw-name" data-open="${esc(v.p.name)}" data-k="awn-${aw.id}-${k}-${esc(v.p.name)}" title="Abrir a ficha de ${esc(v.p.short)}"><span class="dot" style="background:${color(v.p.slot)}"></span><span>${esc(v.p.short)}</span></button>`).join('');
+          return `<li class="${cur}">${head}<span class="aw-who">${who}</span><span class="aw-val">${aw.val(r.winners[0], r.ctx)}</span></li>`;
+        }).join('')}</ol>
+      </article>`).join(''));
   }
 
   function renderSummary() {
