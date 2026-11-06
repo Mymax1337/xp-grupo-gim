@@ -109,7 +109,7 @@ h1 em { font-style: normal; color: var(--gold); }
 .aw-head h3 { margin: 0; font: 700 16px/1.2 var(--f-body); }
 .aw-head div > span { font-size: 12px; color: var(--muted); }
 .aw-badge { width: 40px; height: 40px; border-radius: var(--r); display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); flex: none; }
-.aw-down { color: var(--bad); font: 700 18px/1 var(--f-body); }
+.aw-emoji { font: 22px/1 var(--f-body); }
 .aw-rows { list-style: none; margin: 0; padding: 0; display: grid; }
 .aw-rows li { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 14px; margin-inline: -14px; border-top: 1px solid var(--line-soft); min-height: 52px; }
 .aw-rows li.cur { background: color-mix(in srgb, var(--gold) 9%, transparent); }
@@ -181,8 +181,7 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .card:hover { border-color: var(--axis); box-shadow: 0 6px 22px var(--shade); }
 .card-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
-.rank { font: 600 24px/1 var(--f-mono); color: var(--muted); min-width: 1.6em; }
-.card.first .rank { color: var(--gold); }
+.rank { font: 600 26px/1 var(--f-body); color: var(--muted); min-width: 1.3em; }
 .who { min-width: 0; display: grid; gap: 2px; }
 .who small { font-size: 11px; letter-spacing: .14em; color: var(--muted); font-weight: 700; }
 .who h2 { margin: 0; font: 700 21px/1.15 var(--f-body); display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
@@ -980,7 +979,7 @@ footer p { margin: 0; max-width: 72ch; }
       val: v => `${hrs(v.ehpGained)} EHP<small>${cplus(v.gained)} XP</small>`,
     },
     {
-      id: 'worst', title: 'Lanterninha', sub: 'Menos XP ganho no período', badge: '<span class="aw-down" aria-hidden="true">▼</span>',
+      id: 'worst', title: 'Lanterninha', sub: 'Menos XP ganho no período', badge: '<span class="aw-emoji" aria-hidden="true">🐢</span>',
       key: v => [v.gained], dir: 1, none: 'Ninguém ganhou XP',
       val: (v, ctx) => `${plus(v.gained)} XP<small>${ctx.lead > v.gained ? `${cf.format(ctx.lead - v.gained)} atrás do 1º` : ''}</small>`,
     },
@@ -1081,6 +1080,7 @@ footer p { margin: 0; max-width: 72ch; }
     return `Melhor ${PERIODS[state.period].unit}: <b>${esc(act.best.best)}</b> · <b>${esc(cplus(act.best.gain))}</b>`;
   }
 
+  const RANK_EMOJI = ['🥇', '🥈', '🥉', '🐢'];   // o mesmo do resumo no WhatsApp
   function renderCards() {
     const vs = ranked();
     const per = PERIODS[state.period];
@@ -1092,7 +1092,7 @@ footer p { margin: 0; max-width: 72ch; }
       const profile = `https://wiseoldman.net/players/${enc(p.name.toLowerCase())}`;
       const head = `
         <div class="card-top">
-          <span class="rank">${v.gained != null ? (i + 1) + 'º' : '–'}</span>
+          <span class="rank" ${v.gained != null ? `role="img" aria-label="${i + 1}º lugar" title="${i + 1}º lugar"` : ''}>${v.gained != null ? RANK_EMOJI[i] || `${i + 1}º` : '–'}</span>
           <div class="who"><small>GIM</small><h2><span class="key" style="background:${color(p.slot)}"></span>${esc(p.short)}</h2></div>
           <a class="wom" href="${profile}" target="_blank" rel="noopener">Perfil ↗</a>
         </div>`;
