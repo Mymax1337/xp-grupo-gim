@@ -62,7 +62,7 @@ function buildText(data, dayLabel) {
   const list = (data.players || []).map(stats).filter(Boolean);
   if (!list.length) return null;
   const ranked = list.slice().sort((a, b) => b.xp - a.xp);
-  const medal = ['🥇', '🥈', '🥉'];
+  const medal = ['🥇', '🥈', '🥉', '🐢'];
   const out = [];
   out.push(`🏆 *Resumo do grupo GIM* · ${dayLabel}`, '');
   out.push('*XP do dia*');
