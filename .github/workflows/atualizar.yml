@@ -56,7 +56,8 @@ jobs:
           cp -r index.html icons _site/
           node scripts/coletar.mjs _site/data.json
 
-      # Entre 0h e 2h59 (Brasília) gera o resumo do dia que acabou e manda no WhatsApp pelo CallMeBot.
+      # Na primeira execução depois da meia-noite (Brasília) gera o resumo do dia que acabou e manda no WhatsApp
+      # pelo CallMeBot; se ela falhar, qualquer execução seguinte faz o que faltou.
       # O número e a chave ficam nos segredos do repositório, nunca no código.
       - name: Resumo do dia
         if: steps.idade.outputs.publicar == 'true'

@@ -1017,7 +1017,11 @@ footer p { margin: 0; max-width: 72ch; }
   }
 
   // ---------- Resumo do dia ----------
-  // Gerado à meia-noite pelo GitHub (scripts/resumo.mjs) e guardado no data.json; aqui só mostra e compartilha.
+  // Gerado pelo GitHub assim que o dia fecha (scripts/resumo.mjs) e guardado no data.json; aqui só mostra e compartilha.
+  // Durante o dia, o resumo no ar é sempre o de ontem: o de hoje só existe depois da meia-noite.
+  const BR_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const brDay = (offset = 0) => BR_DAY.format(new Date(Date.now() + offset * 864e5));   // Brasília não tem horário de verão
+  const brLabel = iso => `${['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][new Date(`${iso}T12:00:00-03:00`).getUTCDay()]} ${iso.slice(8)}/${iso.slice(5, 7)}`;
   function renderResumo() {
     const r = state.data && state.data.resumo;
     const box = $('resumo');
@@ -1025,9 +1029,14 @@ footer p { margin: 0; max-width: 72ch; }
     if (box.hidden) return;
     // Mesmo visual do WhatsApp: *negrito* e _itálico_.
     $('rs-text').innerHTML = esc(r.texto).replace(/\*([^*\n]+)\*/g, '<b>$1</b>').replace(/(^|\s)_([^_\n]+)_/g, '$1<i>$2</i>');
-    $('rs-sub').textContent = r.de
-      ? `Do dia ${r.rotulo}, gerado à meia-noite${r.enviado ? ' e já enviado no seu WhatsApp' : ''}. Toque em “Enviar no WhatsApp” e escolha o grupo.`
-      : 'Prévia das últimas 24 horas. O primeiro resumo de verdade sai à meia-noite.';
+    const yesterday = brDay(-1);
+    const share = ' Toque em “Enviar no WhatsApp” e escolha o grupo.';
+    $('rs-title').textContent = r.de === yesterday ? 'Resumo de ontem' : 'Resumo do dia';
+    $('rs-sub').textContent = !r.de
+      ? 'Prévia das últimas 24 horas. O primeiro resumo de verdade sai à meia-noite.'
+      : r.de === yesterday
+        ? `${r.rotulo}, fechado à meia-noite${r.enviado ? ' e já enviado no seu WhatsApp' : ''}. O de hoje (${brLabel(brDay())}) sai à meia-noite.${share}`
+        : `Resumo de ${r.rotulo}. O de ontem (${brLabel(yesterday)}) ainda não saiu; o site tenta de novo a cada hora.${share}`;
     $('rs-wa').href = `https://wa.me/?text=${encodeURIComponent(r.texto)}`;
   }
   $('rs-copy').addEventListener('click', async () => {

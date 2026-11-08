@@ -1,14 +1,19 @@
-// Monta o resumo do dia do grupo e, à meia-noite (horário de Brasília), manda no WhatsApp pelo CallMeBot.
-// Roda logo depois do coletar.mjs, no mesmo workflow. O resumo também fica no data.json para o site
-// mostrar com o botão "Enviar no WhatsApp".
+// Monta o resumo do dia do grupo assim que o dia fecha (meia-noite, horário de Brasília) e manda no WhatsApp
+// pelo CallMeBot. Roda logo depois do coletar.mjs, em toda execução do workflow: se o resumo de ontem ainda
+// não existe (a execução da meia-noite falhou, o site ficou fora do ar...), ele é feito na próxima.
+// O XP vem do Wise Old Man pelo intervalo exato do dia, então o resumo sai igual em qualquer horário.
+// O resumo também fica no data.json para o site mostrar com o botão "Enviar no WhatsApp".
 // Uso: node scripts/resumo.mjs <data.json>
-// Variáveis: CALLMEBOT_PHONE e CALLMEBOT_APIKEY (segredos do GitHub); FORCAR_RESUMO=true manda na hora (teste).
+// Variáveis: CALLMEBOT_PHONE e CALLMEBOT_APIKEY (segredos do GitHub); FORCAR_RESUMO=true refaz e manda na hora (teste).
 
 import { readFile, writeFile } from 'node:fs/promises';
 
 const FILE = process.argv[2] || 'data.json';
 const SITE = 'https://mymax1337.github.io/xp-grupo-gim/';
+const API = 'https://api.wiseoldman.net/v2';
+const HEADERS = { Accept: 'application/json', 'User-Agent': 'xp-grupo-gim (github.com/Mymax1337/xp-grupo-gim)' };
 const TZ = 'America/Sao_Paulo';
+const OFFSET = '-03:00';   // Brasília não tem horário de verão desde 2019
 const FORCE = process.env.FORCAR_RESUMO === 'true';
 const SHORT = { 'GIM Serasa': 'Serasa', 'GIM Skol': 'Skol', 'GIM Zezinho': 'Zezinho', 'GIM Elite Br': 'Elite Br' };
 const SKILL_NAMES = { runecrafting: 'Runecraft' };
@@ -20,6 +25,7 @@ const plus = n => (n > 0 ? '+' : '') + nf.format(n);
 const hrs = h => (h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : `${d1.format(h)} h`);
 const skillName = k => SKILL_NAMES[k] || k[0].toUpperCase() + k.slice(1);
 const WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Data e hora em Brasília, qualquer que seja o fuso do servidor.
 function local(date) {
@@ -30,8 +36,21 @@ function local(date) {
   return { iso: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour), label: `${WD[wd]} ${p.day}/${p.month}` };
 }
 
-function stats(p) {
-  const gd = p.periods && p.periods.day && p.periods.day.gained ? p.periods.day.gained.data : null;
+// O mesmo ritmo do coletor (~19 pedidos por minuto) e a mesma espera quando o WOM pede calma.
+let lastRequest = Date.now();
+async function api(path) {
+  for (let attempt = 0; ; attempt++) {
+    const wait = lastRequest + 3200 - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastRequest = Date.now();
+    const res = await fetch(API + path, { headers: HEADERS });
+    if (res.status === 429 && attempt < 4) { await sleep(30000 * (attempt + 1)); continue; }
+    if (!res.ok) throw new Error(`${path}: ${res.status}`);
+    return res.json();
+  }
+}
+
+function stats(p, gd, from, to) {
   if (!gd) return null;
   const sk = gd.skills || {};
   const bosses = Object.values(gd.bosses || {}).filter(b => b.kills.gained > 0);
@@ -46,7 +65,7 @@ function stats(p) {
     pvmKills: bosses.filter(b => !SKILLING_BOSSES.has(b.metric)).reduce((a, b) => a + b.kills.gained, 0),
     ehb: comp.ehb ? comp.ehb.value.gained : 0,
     ehp: comp.ehp ? comp.ehp.value.gained : 0,
-    achievements: (p.achievements || []).filter(a => Date.now() - Date.parse(a.createdAt) < 864e5),
+    achievements: (p.achievements || []).filter(a => { const t = Date.parse(a.createdAt); return t >= from && t < to; }),
   };
 }
 
@@ -58,8 +77,7 @@ function winners(list, key, dir) {
 }
 const names = list => list.map(v => v.name).join(' e ');
 
-function buildText(data, dayLabel) {
-  const list = (data.players || []).map(stats).filter(Boolean);
+function buildText(list, dayLabel) {
   if (!list.length) return null;
   const ranked = list.slice().sort((a, b) => b.xp - a.xp);
   const medal = ['🥇', '🥈', '🥉', '🐢'];
@@ -118,33 +136,55 @@ async function sendWhatsApp(text) {
   }
 }
 
+// O último resumo publicado fica no data.json do site. Se não der para ler, o resumo é refeito
+// (sai igual, o intervalo é fixo), mas não é mandado de novo no WhatsApp para não repetir.
+async function publishedResumo() {
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await fetch(`${SITE}data.json?t=${Date.now()}`);
+      if (r.status === 404) return { ok: true, resumo: null };   // site ainda sem dados
+      if (r.ok) return { ok: true, resumo: (await r.json()).resumo || null };
+    } catch { /* tenta de novo */ }
+    await sleep(5000);
+  }
+  return { ok: false, resumo: null };
+}
+
 const data = JSON.parse(await readFile(FILE, 'utf8'));
-let previous = null;
-try {
-  const r = await fetch(`${SITE}data.json?t=${Date.now()}`);
-  if (r.ok) previous = await r.json();
-} catch { /* primeira vez */ }
+const published = await publishedResumo();
+let resumo = published.resumo;
 
 const now = new Date();
 const today = local(now);
-const day = local(new Date(now.getTime() - 3 * 36e5));   // entre 0h e 2h59, o dia que acabou
-let resumo = previous && previous.resumo ? previous.resumo : null;
-// Meia-noite: a execução das 0h05 manda; se ela falhar, as de 1h e 2h ainda pegam. Só uma vez por dia.
-const due = today.hour <= 2 && (!resumo || resumo.de !== day.iso);
+const yesterday = local(new Date(Date.parse(`${today.iso}T12:00:00${OFFSET}`) - 864e5));
+const from = Date.parse(`${yesterday.iso}T00:00:00${OFFSET}`);
+// Até 0h30 de hoje: pega a leitura da meia-noite (0h05), que fecha o dia.
+const to = Math.min(now.getTime(), Date.parse(`${today.iso}T00:30:00${OFFSET}`));
 
-const preview = !resumo || !resumo.de;   // antes do primeiro resumo de meia-noite, o site mostra uma prévia (sem enviar)
-
-if (due || FORCE || preview) {
-  const text = buildText(data, due ? day.label : 'últimas 24 horas');
+if (FORCE || !resumo || resumo.de !== yesterday.iso) {
+  const list = [];
+  let missing = 0;
+  for (const p of data.players || []) {
+    try {
+      const g = await api(`/players/${encodeURIComponent(p.name)}/gained?startDate=${new Date(from).toISOString()}&endDate=${new Date(to).toISOString()}`);
+      list.push(stats(p, g.data, from, to));
+    } catch (e) {
+      console.log(`Sem o XP de ontem de ${p.name}: ${e.message}`);
+      // Logo depois da meia-noite as últimas 24 horas são o próprio dia; mais tarde, melhor tentar na próxima hora.
+      const day = p.periods && p.periods.day && p.periods.day.gained;
+      if (today.hour <= 2 && day) list.push(stats(p, day.data, from, to)); else missing++;
+    }
+  }
+  const text = !missing ? buildText(list.filter(Boolean), yesterday.label) : null;
   if (text) {
-    console.log(`--- resumo ---\n${text}\n--------------`);
-    const sent = due || FORCE ? await sendWhatsApp(text) : false;
-    const novo = { de: due ? day.iso : null, rotulo: due ? day.label : 'últimas 24 horas', geradoEm: now.toISOString(), texto: text, enviado: sent };
-    // Um teste fora de hora só aparece no site enquanto não existir um resumo de meia-noite.
-    if (due || !resumo || !resumo.de) resumo = novo;
+    console.log(`--- resumo de ${yesterday.iso} ---\n${text}\n--------------`);
+    const sent = published.ok || FORCE ? await sendWhatsApp(text) : false;
+    resumo = { de: yesterday.iso, rotulo: yesterday.label, geradoEm: now.toISOString(), texto: text, enviado: sent };
+  } else {
+    console.log('Resumo de ontem incompleto; tento de novo na próxima execução.');
   }
 } else {
-  console.log(`Fora da janela do resumo (agora ${today.hour}h em Brasília); mantendo o último.`);
+  console.log(`Resumo de ${resumo.rotulo} já publicado; o de hoje sai à meia-noite.`);
 }
 
 if (resumo) data.resumo = resumo;
