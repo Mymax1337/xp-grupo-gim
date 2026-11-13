@@ -5,9 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>XP do Grupo GIM</title>
 <meta name="description" content="Acompanha o XP, os chefes e as conquistas dos membros do grupo GIM de Old School RuneScape, atualizado a cada hora pelo Wise Old Man.">
+<meta name="theme-color" content="#171511" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#efebe3" media="(prefers-color-scheme: light)">
+<!-- Prévia do link no WhatsApp e em outras redes -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:url" content="https://mymax1337.github.io/xp-grupo-gim/">
+<meta property="og:title" content="XP do Grupo GIM">
+<meta property="og:description" content="Quem upou mais hoje? XP, chefes, metas e conquistas do grupo, atualizados a cada hora.">
+<meta property="og:image" content="https://mymax1337.github.io/xp-grupo-gim/icons/capa.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="icons/m/overall.png">
 <script>
   // Começa a baixar os dados antes do resto da página; o parâmetro evita cópias antigas em cache.
   window.__gimData = fetch('data.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
+  window.__gimData.catch(function () {});   // sem rede, quem trata o erro é o loadData mais abaixo
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -180,6 +194,7 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
   transition: border-color .15s, box-shadow .15s;
 }
 .card:hover { border-color: var(--axis); box-shadow: 0 6px 22px var(--shade); }
+.card.first { border-color: color-mix(in srgb, var(--gold) 50%, var(--line)); }   /* quem lidera o período */
 .card-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
 .rank { font: 600 26px/1 var(--f-body); color: var(--muted); min-width: 1.3em; }
 .who { min-width: 0; display: grid; gap: 2px; }
@@ -932,9 +947,12 @@ footer p { margin: 0; max-width: 72ch; }
   }
 
   // ---------- Renderização ----------
+  // Cada painel é pintado por conta própria: um dado inesperado num deles não deixa os outros em branco.
   function render() {
     bucketMemo = new Map();
-    renderStatus(); renderAwards(); renderResumo(); renderSummary(); renderCards(); renderGoals(); renderChart(); renderSkills(); renderBosses(); renderAch(); renderSheet();
+    for (const fn of [renderStatus, renderAwards, renderResumo, renderSummary, renderCards, renderGoals, renderChart, renderSkills, renderBosses, renderAch, renderSheet]) {
+      try { fn(); } catch (e) { console.error(`Falha ao pintar (${fn.name}):`, e); }
+    }
     syncButtons();
   }
   function syncButtons() {
@@ -1807,11 +1825,19 @@ footer p { margin: 0; max-width: 72ch; }
       </article>`;
   }
 
+  // Uma meta gravada com dados estranhos some da lista em vez de derrubar a seção inteira.
+  const safeCard = g => { try { return goalCard(g); } catch (e) { console.error('Meta ignorada:', g && g.id, e); return ''; } };
+
   function renderGoals() {
     const el = $('goals');
     $('goal-new-btn').hidden = goals.status !== 'ready';
+    const asking = goals.status === 'locked' || goals.status === 'badcode';
+    if (!asking) delete el.dataset.lock;
     if (goals.status === 'off') { el.innerHTML = '<p class="empty-note">As metas ainda não foram ligadas neste site.</p>'; return; }
-    if (goals.status === 'locked' || goals.status === 'badcode') {
+    if (asking) {
+      // A página se repinta sozinha a cada 5 minutos: sem isto, apagaria o código que a pessoa está digitando.
+      if (el.dataset.lock === goals.status && $('code-input')) return;
+      el.dataset.lock = goals.status;
       paint(el, `<div class="lock">
           <p>${goals.status === 'badcode' ? '<b>Esse código não confere.</b> Confira o link do grupo e tente de novo.' : 'As metas são só do grupo. Abra o link do grupo, que já traz o código, ou digite o código aqui:'}</p>
           <form id="code-form"><input class="field" id="code-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Código do grupo" aria-label="Código do grupo" data-k="code-input"><button class="btn btn-main lg" type="submit">Entrar</button></form>
@@ -1830,14 +1856,14 @@ footer p { margin: 0; max-width: 72ch; }
     const grp = open.filter(g => g.escopo === 'grupo');
     const ind = open.filter(g => g.escopo !== 'grupo')
       .sort((a, b) => PLAYERS.findIndex(p => p.name === a.jogador) - PLAYERS.findIndex(p => p.name === b.jogador));
-    const sec = (title, list) => (list.length ? `<div class="goal-sec"><h3>${title}</h3><div class="goal-grid">${list.map(goalCard).join('')}</div></div>` : '');
+    const sec = (title, list) => (list.length ? `<div class="goal-sec"><h3>${title}</h3><div class="goal-grid">${list.map(safeCard).join('')}</div></div>` : '');
     const empty = !goals.list.length
       ? '<p class="empty-note">Nenhuma meta ainda. Toque em “+ Nova meta” para criar a primeira: um nível para alguém alcançar ou um item para conseguir.</p>'
       : !open.length && !done.length ? '<p class="empty-note">Nenhuma meta neste filtro.</p>' : '';
     paint(el, `<div class="goals-body">
         <div class="chips" role="group" aria-label="Filtrar metas">${chips.map(c => `<button type="button" class="chip" data-gfilter="${esc(c.id)}" data-k="gfl-${esc(c.id)}" aria-pressed="${goals.filter === c.id}">${c.slot ? `<span class="dot" style="background:${color(c.slot)}"></span>` : ''}${esc(c.label)}</button>`).join('')}</div>
         ${empty}${sec('Do grupo', grp)}${sec('Individuais', ind)}
-        ${done.length ? `<div class="goal-sec"><div><button type="button" class="btn" data-goals-showdone data-k="g-showdone">${goals.showDone ? 'Esconder' : 'Mostrar'} concluídas (${done.length})</button></div>${goals.showDone ? `<div class="goal-grid">${done.map(goalCard).join('')}</div>` : ''}</div>` : ''}
+        ${done.length ? `<div class="goal-sec"><div><button type="button" class="btn" data-goals-showdone data-k="g-showdone">${goals.showDone ? 'Esconder' : 'Mostrar'} concluídas (${done.length})</button></div>${goals.showDone ? `<div class="goal-grid">${done.map(safeCard).join('')}</div>` : ''}</div>` : ''}
         <p class="goals-foot"><span>As metas ficam salvas para todo o grupo e aparecem na hora para todos.</span><button type="button" class="linkish" data-goals-logout data-k="g-logout">Sair do grupo neste aparelho</button></p>
       </div>`);
   }
@@ -1851,9 +1877,9 @@ footer p { margin: 0; max-width: 72ch; }
     const done = sortGoals(mine.filter(g => goalState(g).done));
     const grp = sortGoals(goals.list.filter(g => g.escopo === 'grupo' && !goalState(g).done));
     return `<div class="g-actions"><button type="button" class="btn btn-main lg" data-goal-new="${esc(p.name)}" data-k="gn-${esc(p.name)}">+ Nova meta para ${esc(p.short)}</button></div>
-      ${open.length ? `<div class="goal-grid">${open.map(goalCard).join('')}</div>` : `<p class="empty-note">${esc(p.short)} não tem metas em andamento.</p>`}
-      ${done.length ? `<div class="goal-sec"><h3>Concluídas</h3><div class="goal-grid">${done.map(goalCard).join('')}</div></div>` : ''}
-      ${grp.length ? `<div class="goal-sec"><h3>Metas do grupo</h3><div class="goal-grid">${grp.map(goalCard).join('')}</div></div>` : ''}`;
+      ${open.length ? `<div class="goal-grid">${open.map(safeCard).join('')}</div>` : `<p class="empty-note">${esc(p.short)} não tem metas em andamento.</p>`}
+      ${done.length ? `<div class="goal-sec"><h3>Concluídas</h3><div class="goal-grid">${done.map(safeCard).join('')}</div></div>` : ''}
+      ${grp.length ? `<div class="goal-sec"><h3>Metas do grupo</h3><div class="goal-grid">${grp.map(safeCard).join('')}</div></div>` : ''}`;
   }
 
   // Quando alguém abre o site e vê que uma meta de nível foi alcançada, ela fica marcada com a data.
@@ -2123,7 +2149,8 @@ footer p { margin: 0; max-width: 72ch; }
     if ('sheetclose' in ds) return dlg.close();
     if (ds.tab) { state.sheet.tab = ds.tab; return renderSheet(); }
     if (ds.shsort) { state.sheet.sort = ds.shsort; return renderSheet(); }
-    if (t.matches('article.card') && t.dataset.player && !e.target.closest('a')) openSheet(t.dataset.player);
+    // Tocar nas barrinhas mostra o valor do dia/hora; o resto do cartão abre a ficha.
+    if (t.matches('article.card') && t.dataset.player && !e.target.closest('a, .bars')) openSheet(t.dataset.player);
   });
   // Chefe novo sem ícone ainda: some o ícone e fica só o nome.
   document.addEventListener('error', e => { if (e.target.classList && e.target.classList.contains('ic')) e.target.style.visibility = 'hidden'; }, true);
@@ -2160,6 +2187,7 @@ footer p { margin: 0; max-width: 72ch; }
     if (ro) ro.textContent = i.dataset.tip;
   });
   document.addEventListener('pointerout', e => {
+    if (e.pointerType && e.pointerType !== 'mouse') return;   // no toque, o valor fica na tela depois de soltar o dedo
     const bars = e.target.closest('.bars');
     if (!bars || (e.relatedTarget && bars.contains(e.relatedTarget))) return;
     const ro = bars.closest('.card, .sh-sec').querySelector('.readout');
@@ -2170,7 +2198,13 @@ footer p { margin: 0; max-width: 72ch; }
     const p = PLAYERS.find(x => slug(x) === h);
     if (p) openSheet(p.name);
   }
-  window.addEventListener('hashchange', fromHash);
+  window.addEventListener('hashchange', () => {
+    // Link do grupo aberto com o site já aberto na mesma aba: o código chega só pelo #.
+    const before = store.get('gim-codigo');
+    goalsCodeFromUrl();
+    if (store.get('gim-codigo') !== before) startGoals();
+    fromHash();
+  });
 
   let rz = 0;
   new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(renderChart); }).observe($('chart-box'));
