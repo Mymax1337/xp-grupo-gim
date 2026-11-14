@@ -2,7 +2,7 @@
 // Roda de hora em hora pelo GitHub Actions (.github/workflows/atualizar.yml).
 // Uso: node scripts/coletar.mjs <arquivo-de-saida.json>
 
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 const PLAYERS = ['GIM Serasa', 'GIM Skol', 'GIM Zezinho', 'GIM Elite Br'];
@@ -148,7 +148,17 @@ if (!players.some(p => p.details && !p.error)) {
   process.exit(1);
 }
 
-await writeFile(OUT, JSON.stringify({ generatedAt: new Date().toISOString(), players }));
+// Comentário da IA local do grupo: ia.json na raiz do repositório, gravado por scripts/comentario.mjs
+// no PC onde roda o Ollama. Entra no data.json para a página não precisar de mais um pedido.
+let ia = null;
+try {
+  const j = JSON.parse(await readFile(new URL('../ia.json', import.meta.url), 'utf8'));
+  if (j && typeof j.texto === 'string' && j.texto.trim() && typeof j.de === 'string') {
+    ia = { de: j.de.slice(0, 10), rotulo: String(j.rotulo || '').slice(0, 20), modelo: String(j.modelo || '').slice(0, 60), geradoEm: j.geradoEm || null, texto: j.texto.trim().slice(0, 600) };
+  }
+} catch { /* ainda não há comentário */ }
+
+await writeFile(OUT, JSON.stringify({ generatedAt: new Date().toISOString(), players, ...(ia ? { ia } : {}) }));
 console.log(`Gravado ${OUT}`);
 
 // Lista de itens do jogo (wiki do OSRS) para a busca de metas de item.
